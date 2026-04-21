@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>Vaal Talk</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<!-- Cloudflare Stream Player SDK -->
+<script src="https://embed.cloudflarestream.com/embed/sdk.latest.js" defer></script>
+<!-- TUS resumable upload client -->
+<script src="https://unpkg.com/tus-js-client@latest/dist/tus.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --gold:#F5A623;--gold2:#FFD166;--pink:#FF4081;--green:#00C853;--blue:#2979FF;
+  --bg:#0A0A0A;--surface:#141414;--surface2:#1E1E1E;--surface3:#252525;
+  --border:#2A2A2A;--text:#F0F0F0;--muted:#888;--red:#FF3B30;
+}
+html,body{background:var(--bg);color:var(--text);font-family:'Nunito',sans-serif;height:100%;overflow:hidden}
+.app{display:flex;flex-direction:column;height:100vh;max-width:430px;margin:0 auto;position:relative;background:var(--bg)}
+/* NAV */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(10,10,10,.97);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;z-index:100;padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px))}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:6px 0 4px;gap:3px;cursor:pointer}
+.nav-item svg{width:22px;height:22px;stroke:var(--muted);transition:stroke .15s}
+.nav-item span{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.4px}
+.nav-item.active svg{stroke:var(--gold)}
+.nav-item.active span{color:var(--gold)}
+.nav-upload{flex:1;display:flex;flex-direction:column;align-items:center;padding:0;cursor:pointer;gap:3px}
+.nav-upload-btn{width:48px;height:34px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-top:-8px;box-shadow:0 4px 16px rgba(245,166,35,.45)}
+.nav-upload-btn svg{stroke:#000;width:22px;height:22px}
+.nav-upload span{font-size:10px;font-weight:700;color:var(--muted)}
+/* PAGES */
+.page{display:none;flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:72px}
+.page.active{display:block}
+.page-fill{display:none;flex-direction:column;overflow:hidden}
+.page-fill.active{display:flex}
+/* TOPBAR */
+.topbar{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:50;padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to bottom,rgba(10,10,10,.95) 60%,transparent)}
+.logo{font-family:'Bebas Neue';font-size:26px;letter-spacing:1px;color:var(--gold)}
+.logo span{color:#fff}
+.topbar-tabs{display:flex;gap:18px}
+.topbar-tab{font-size:14px;font-weight:700;color:var(--muted);cursor:pointer;padding:4px 0;border-bottom:2px solid transparent}
+.topbar-tab.active{color:#fff;border-bottom-color:var(--gold)}
+.ticon{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.ticon svg{width:18px;height:18px;stroke:#fff}
+
+/* ── VIDEO FEED ── */
+.feed-wrap{height:calc(100vh - 58px);overflow-y:scroll;scroll-snap-type:y mandatory}
+.feed-wrap::-webkit-scrollbar{display:none}
+.video-card{height:calc(100vh - 58px);scroll-snap-align:start;position:relative;display:flex;align-items:flex-end;overflow:hidden;background:#000}
+
+/* CF Stream player fills the card */
+.stream-player{position:absolute;inset:0;width:100%;height:100%;border:none;background:#000}
+/* `stream` element from CF SDK */
+stream.stream-player{display:block}
+
+/* Placeholder when no video UID configured */
+.video-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--surface2)}
+.video-placeholder-bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.35)}
+.video-placeholder-content{position:relative;z-index:1;text-align:center}
+.video-placeholder-content svg{width:52px;height:52px;stroke:var(--gold);margin-bottom:10px}
+.video-placeholder-content p{font-weight:800;font-size:14px;margin-bottom:4px}
+.video-placeholder-content small{font-size:11px;color:var(--muted)}
+.cf-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(245,166,35,.15);border:1px solid rgba(245,166,35,.3);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--gold);margin-top:8px;cursor:pointer}
+
+.vov{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.88) 0%,rgba(0,0,0,.1) 55%,transparent 100%);pointer-events:none;z-index:1}
+.vinfo{position:relative;z-index:2;padding:0 14px 18px;flex:1;min-width:0}
+.vuser{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.vavatar{width:34px;height:34px;border-radius:50%;border:2px solid var(--gold);background:var(--surface3);background-size:cover;flex-shrink:0}
+.vname{font-weight:800;font-size:14px}
+.vloc{font-size:11px;color:rgba(255,255,255,.55)}
+.fchip{background:var(--gold);color:#000;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;cursor:pointer}
+.vdesc{font-size:13px;color:rgba(255,255,255,.88);line-height:1.5;margin-bottom:6px}
+.vtags span{color:var(--gold2);font-size:12px;font-weight:700;margin-right:6px}
+.vactions{position:absolute;right:10px;bottom:75px;z-index:2;display:flex;flex-direction:column;align-items:center;gap:16px}
+.abtn{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+.abtn svg{width:26px;height:26px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
+.abtn span{font-size:10px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.9)}
+.abtn.liked svg{stroke:var(--red)!important;fill:var(--red)}
+/* CF status ribbon */
+.cf-status-bar{position:absolute;top:54px;left:0;right:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:6px;pointer-events:none}
+.cf-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:700}
+.cf-dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+.cf-dot.demo{background:var(--gold)}
+
+/* ── GENERIC PAGES ── */
+.pg-header{padding:54px 16px 14px;display:flex;align-items:center;justify-content:space-between}
+.pg-title{font-family:'Bebas Neue';font-size:26px;letter-spacing:1px;color:var(--gold)}
+.pg-sub{font-size:12px;color:var(--muted);margin-top:1px}
+.sbar{margin:0 16px 14px;background:var(--surface2);border-radius:12px;display:flex;align-items:center;padding:11px 14px;gap:9px;border:1px solid var(--border)}
+.sbar input{background:none;border:none;color:var(--text);font-family:'Nunito';font-size:14px;flex:1;outline:none}
+.sbar input::placeholder{color:var(--muted)}
+.sbar svg{width:17px;height:17px;stroke:var(--muted)}
+.sec-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px}
+.sec-title{font-family:'Bebas Neue';font-size:20px;color:var(--gold)}
+.see-all{font-size:12px;color:var(--gold);font-weight:700;cursor:pointer}
+
+/* ── DISCOVER ── */
+.trend-item{background:var(--surface2);border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:12px;border:1px solid var(--border);margin:0 16px 8px;cursor:pointer}
+.trend-rank{font-family:'Bebas Neue';font-size:26px;color:var(--border);min-width:26px}
+.trend-rank.top{color:var(--gold)}
+.trend-tag{font-weight:800;font-size:13px}
+.trend-count{font-size:11px;color:var(--muted)}
+.trend-thumb{width:50px;height:50px;border-radius:8px;background-size:cover;flex-shrink:0}
+.creator-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px}
+.creator-card{background:var(--surface2);border-radius:14px;overflow:hidden;border:1px solid var(--border);cursor:pointer}
+.creator-banner{height:66px;background-size:cover;background-position:center}
+.creator-body{padding:10px;text-align:center;margin-top:-20px}
+.creator-av{width:44px;height:44px;border-radius:50%;background:var(--surface3);border:3px solid var(--surface2);margin:0 auto 5px;background-size:cover}
+.creator-name{font-weight:800;font-size:12px}
+.creator-stats{font-size:10px;color:var(--muted);margin:2px 0 7px}
+.follow-btn{width:100%;background:var(--gold);color:#000;border:none;border-radius:7px;padding:6px;font-family:'Nunito';font-weight:800;font-size:11px;cursor:pointer}
+.follow-btn.following{background:var(--surface3);color:var(--muted);border:1px solid var(--border)}
+
+/* ── MARKETPLACE ── */
+.mkt-tab-bar{display:flex;margin:0 16px 16px;background:var(--surface2);border-radius:12px;padding:4px;border:1px solid var(--border)}
+.mkt-tab{flex:1;padding:10px;text-align:center;font-weight:800;font-size:13px;color:var(--muted);cursor:pointer;border-radius:9px;transition:all .2s}
+.mkt-tab.active{background:var(--gold);color:#000}
+.mkt-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px}
+.mkt-card{background:var(--surface2);border-radius:14px;overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:transform .15s}
+.mkt-card:active{transform:scale(.97)}
+.mkt-img{height:135px;background-size:cover;background-position:center;position:relative}
+.mkt-badge{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);border-radius:6px;padding:3px 7px;font-size:10px;font-weight:800}
+.mkt-badge.hot{color:var(--pink)}
+.mkt-badge.new{color:var(--green)}
+.mkt-body{padding:10px}
+.mkt-title{font-weight:700;font-size:13px;margin-bottom:3px}
+.mkt-price{font-family:'Bebas Neue';font-size:21px;color:var(--gold)}
+.mkt-seller{font-size:11px;color:var(--muted);margin-top:3px}
+.mall-header-banner{margin:0 16px 16px;background:var(--surface2);border-radius:14px;padding:16px;border:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.mall-header-text strong{font-size:14px;display:block;margin-bottom:3px}
+.mall-header-text small{font-size:11px;color:var(--muted)}
+.register-btn{background:var(--gold);color:#000;border:none;border-radius:9px;padding:9px 14px;font-family:'Nunito';font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap}
+.mall-card{background:var(--surface2);border-radius:14px;padding:14px;border:1px solid var(--border);display:flex;align-items:center;gap:12px;margin:0 16px 10px;cursor:pointer}
+.mall-logo{width:54px;height:54px;border-radius:12px;flex-shrink:0;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue';font-size:18px;color:var(--gold);border:1px solid var(--border)}
+.mall-info{flex:1;min-width:0}
+.mall-name{font-weight:800;font-size:14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.gbadge{background:var(--gold);color:#000;font-size:9px;font-weight:800;padding:2px 5px;border-radius:4px}
+.mall-cat{font-size:11px;color:var(--muted);margin:2px 0 4px}
+.mall-rating{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700}
+.mall-rating svg{width:12px;height:12px;fill:var(--gold)}
+.sell-fab{position:fixed;bottom:78px;right:max(16px,calc(50% - 199px));width:50px;height:50px;background:var(--gold);border-radius:14px;display:none;align-items:center;justify-content:center;z-index:90;cursor:pointer;box-shadow:0 4px 18px rgba(245,166,35,.5)}
+.sell-fab.show{display:flex}
+.sell-fab svg{stroke:#000;width:24px;height:24px}
+
+/* ── COMMUNITIES ── */
+.kasie-hero{margin:54px 16px 14px;padding:18px;background:var(--surface2);border-radius:16px;border:1px solid var(--border)}
+.kasie-hero-title{font-family:'Bebas Neue';font-size:30px;color:var(--gold);line-height:1}
+.kasie-hero-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.live-banner{margin:0 16px 14px;background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.3);border-radius:13px;padding:13px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.live-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(255,59,48,.9);color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:.5px;flex-shrink:0}
+.live-dot{width:7px;height:7px;background:#fff;border-radius:50%;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.kasie-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px;margin-bottom:10px}
+.kasie-card{background:var(--surface2);border-radius:14px;padding:14px;border:1px solid var(--border);cursor:pointer;position:relative;overflow:hidden;transition:transform .15s}
+.kasie-card:active{transform:scale(.97)}
+.kasie-card.joined{border-color:rgba(245,166,35,.35)}
+.kasie-card.joined::after{content:'✓ Joined';position:absolute;top:8px;right:8px;font-size:9px;font-weight:800;color:var(--gold)}
+.kasie-name{font-weight:800;font-size:14px;margin-bottom:3px;padding-right:38px}
+.kasie-members{font-size:11px;color:var(--muted)}
+.kasie-prog{height:3px;background:var(--surface3);border-radius:2px;margin:8px 0;overflow:hidden}
+.kasie-progbar{height:100%;background:var(--gold);border-radius:2px}
+.kasie-chat{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:3px 7px;border-radius:20px;margin-top:4px}
+.kasie-chat.on{background:rgba(0,200,83,.12);color:var(--green)}
+.kasie-chat.off{background:rgba(255,255,255,.05);color:var(--muted)}
+.req-community{margin:0 16px 16px;background:var(--surface2);border-radius:14px;padding:16px;border:1px dashed var(--border);text-align:center;cursor:pointer}
+
+/* ── CHAT ── */
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 58px)}
+.chat-hd{padding:50px 14px 12px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.chat-back{width:34px;height:34px;border-radius:9px;background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.chat-msgs::-webkit-scrollbar{display:none}
+.msg-row{display:flex;gap:8px;align-items:flex-end}
+.msg-row.mine{flex-direction:row-reverse}
+.mavatar{width:28px;height:28px;border-radius:50%;background:var(--surface3);flex-shrink:0;background-size:cover}
+.mbubble{max-width:72%;padding:9px 12px;border-radius:16px;background:var(--surface2);font-size:13px;line-height:1.5}
+.msg-row.mine .mbubble{background:var(--gold);color:#000;font-weight:600}
+.mname{font-size:10px;color:var(--muted);margin-bottom:3px;font-weight:700}
+.mtime{font-size:10px;color:var(--muted);margin-top:3px}
+.chat-input-bar{padding:10px 14px;background:var(--surface);border-top:1px solid var(--border);display:flex;gap:9px;align-items:center;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+.cinput-msg{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:22px;padding:9px 14px;color:var(--text);font-family:'Nunito';font-size:13px;outline:none}
+.csend{width:40px;height:40px;background:var(--gold);border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.csend svg{width:17px;height:17px;stroke:#000}
+
+/* ── PROFILE ── */
+.profile-cover{height:170px;background-size:cover;background-position:center;position:relative}
+.prof-ov{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.25),rgba(10,10,10,.96))}
+.prof-av-wrap{position:absolute;bottom:-38px;left:50%;transform:translateX(-50%)}
+.prof-av{width:80px;height:80px;border-radius:50%;border:3px solid var(--gold);background-size:cover;background-position:center}
+.prof-verified{position:absolute;bottom:0;right:0;width:22px;height:22px;background:var(--gold);border-radius:50%;border:2px solid var(--bg);display:flex;align-items:center;justify-content:center}
+.prof-verified svg{width:11px;height:11px;stroke:#000}
+.prof-hd{text-align:center;margin-top:48px;padding:0 20px}
+.prof-name{font-family:'Bebas Neue';font-size:24px;letter-spacing:1px}
+.prof-handle{font-size:12px;color:var(--muted);margin-bottom:8px}
+.prof-bio{font-size:13px;color:rgba(255,255,255,.7);line-height:1.5;margin-bottom:12px}
+.prof-stats{display:flex;justify-content:center;gap:28px;margin-bottom:14px}
+.stat-box{text-align:center}
+.snum{font-family:'Bebas Neue';font-size:22px;color:var(--gold)}
+.slabel{font-size:10px;color:var(--muted)}
+.prof-btns{display:flex;gap:8px;padding:0 16px;margin-bottom:16px}
+.edit-btn{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:10px;font-family:'Nunito';font-weight:700;font-size:13px;cursor:pointer}
+.share-btn{width:40px;height:40px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.share-btn svg{width:17px;height:17px;stroke:var(--text)}
+.prem-badge{margin:0 16px 16px;background:rgba(245,166,35,.07);border:1px solid rgba(245,166,35,.25);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px}
+.prem-badge svg{width:18px;height:18px;stroke:var(--gold);flex-shrink:0}
+.prem-badge strong{font-size:13px;display:block}
+.prem-badge small{font-size:11px;color:var(--muted)}
+.prof-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.prof-post{aspect-ratio:1;background-size:cover;background-position:center;background-color:var(--surface2);cursor:pointer;position:relative;overflow:hidden}
+.post-ov{position:absolute;inset:0;background:rgba(0,0,0,.5);opacity:0;transition:.2s;display:flex;align-items:center;justify-content:center}
+.prof-post:hover .post-ov{opacity:1}
+.post-ov svg{width:22px;height:22px;stroke:#fff}
+.menu-item{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.menu-item:active{background:var(--surface2)}
+.menu-item svg{width:19px;height:19px;stroke:var(--gold);flex-shrink:0}
+.menu-item-text{flex:1;font-weight:600;font-size:13px}
+.menu-chevron{font-size:14px;color:var(--muted)}
+
+/* ── ADMIN ── */
+.admin-wrap{padding-bottom:80px}
+.admin-hd{padding:50px 16px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.admin-back{width:34px;height:34px;border-radius:9px;background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.admin-title{font-family:'Bebas Neue';font-size:26px}
+.admin-title span{color:var(--red)}
+.stat-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px}
+.scard{background:var(--surface2);border-radius:13px;padding:13px;border:1px solid var(--border)}
+.scard-label{font-size:10px;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.scard-num{font-family:'Bebas Neue';font-size:30px;line-height:1}
+.scard-change{font-size:11px;margin-top:3px}
+.admin-sec{margin:0 16px 16px}
+.admin-sec-title{font-weight:800;font-size:11px;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px}
+.report-item{background:var(--surface2);border-radius:12px;padding:12px;border:1px solid var(--border);margin-bottom:8px}
+.rbadge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;display:inline-block;margin-bottom:6px}
+.rbadge.violence{background:rgba(255,59,48,.15);color:var(--red)}
+.rbadge.spam{background:rgba(255,64,129,.15);color:var(--pink)}
+.rbadge.explicit{background:rgba(245,166,35,.15);color:var(--gold)}
+.rdesc{font-size:12px;color:var(--muted);margin-bottom:9px;line-height:1.5}
+.rbtns{display:flex;gap:7px}
+.rbtn{flex:1;padding:7px;border-radius:8px;border:none;font-family:'Nunito';font-weight:800;font-size:11px;cursor:pointer}
+.rbtn.del{background:rgba(255,59,48,.12);color:var(--red)}
+.rbtn.dim{background:var(--surface3);color:var(--muted)}
+.rbtn.ban{background:rgba(255,59,48,.18);color:var(--red)}
+
+/* ── CF STREAM SETTINGS CARD ── */
+.cf-settings-card{margin:0 16px 16px;background:var(--surface2);border-radius:14px;border:1px solid rgba(245,166,35,.3);overflow:hidden}
+.cf-settings-header{background:rgba(245,166,35,.08);padding:14px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.cf-settings-header svg{width:18px;height:18px;stroke:var(--gold)}
+.cf-settings-header strong{font-size:14px}
+.cf-settings-header small{font-size:11px;color:var(--muted);display:block;margin-top:1px}
+.cf-status-indicator{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700}
+.cf-status-indicator .dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.cf-status-indicator .dot.connected{background:var(--green)}
+.cf-settings-body{padding:14px 16px}
+.cf-field{margin-bottom:12px}
+.cf-label{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:block}
+.cf-input{width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:9px;padding:10px 13px;color:var(--text);font-family:'Nunito';font-size:13px;outline:none}
+.cf-input:focus{border-color:var(--gold)}
+.cf-save-btn{width:100%;background:var(--gold);color:#000;border:none;border-radius:9px;padding:11px;font-family:'Nunito';font-weight:800;font-size:13px;cursor:pointer}
+.cf-test-btn{width:100%;background:var(--surface3);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:10px;font-family:'Nunito';font-weight:700;font-size:13px;cursor:pointer;margin-top:8px}
+
+/* ── MODALS ── */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:200;display:flex;align-items:flex-end;backdrop-filter:blur(6px)}
+.modal-ov.hidden{display:none}
+.modal-sheet{width:100%;max-width:430px;margin:0 auto;background:var(--surface);border-radius:20px 20px 0 0;padding:0 0 calc(env(safe-area-inset-bottom,0px) + 16px);max-height:85vh;overflow-y:auto;animation:su .28s ease}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.mhandle{width:34px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 6px}
+.mtitle{font-weight:800;font-size:15px;padding:6px 16px 12px;border-bottom:1px solid var(--border)}
+.comment-item{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:9px}
+.cav{width:32px;height:32px;border-radius:50%;background:var(--surface3);flex-shrink:0;background-size:cover}
+.cuser{font-weight:700;font-size:12px}
+.ctext{font-size:13px;color:rgba(255,255,255,.82);margin:2px 0;line-height:1.5}
+.ctime{font-size:10px;color:var(--muted)}
+.cinput-row{padding:12px 16px;display:flex;gap:9px;align-items:center;border-top:1px solid var(--border)}
+.cfield{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:9px 13px;color:var(--text);font-family:'Nunito';font-size:13px;outline:none}
+.cpost-btn{background:var(--gold);color:#000;border:none;border-radius:20px;padding:8px 14px;font-weight:800;font-size:12px;cursor:pointer}
+
+/* ── UPLOAD MODAL (CF Stream) ── */
+.upload-body{padding:16px}
+.upload-title{font-family:'Bebas Neue';font-size:22px;color:var(--gold);margin-bottom:14px}
+.dropzone{border:2px dashed var(--border);border-radius:14px;padding:28px 16px;text-align:center;margin-bottom:14px;cursor:pointer;transition:border-color .2s;position:relative;overflow:hidden}
+.dropzone:hover{border-color:var(--gold)}
+.dropzone svg{width:44px;height:44px;stroke:var(--gold);margin-bottom:8px}
+.dropzone p{font-weight:700;font-size:13px;margin-bottom:3px}
+.dropzone small{color:var(--muted);font-size:11px}
+.dropzone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+
+/* Upload progress */
+.upload-progress{display:none;margin-bottom:14px}
+.upload-progress.show{display:block}
+.progress-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.progress-file{font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px}
+.progress-pct{font-family:'Bebas Neue';font-size:20px;color:var(--gold)}
+.progress-bar-wrap{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-bottom:6px}
+.progress-bar{height:100%;background:var(--gold);border-radius:3px;width:0%;transition:width .3s}
+.progress-status{font-size:11px;color:var(--muted)}
+.progress-status.done{color:var(--green)}
+.progress-status.err{color:var(--red)}
+
+/* Upload stage indicator */
+.upload-stages{display:flex;gap:0;margin-bottom:14px}
+.ustage{flex:1;padding:8px;text-align:center;font-size:10px;font-weight:700;color:var(--muted);border-bottom:2px solid var(--border);transition:all .2s}
+.ustage.active{color:var(--gold);border-bottom-color:var(--gold)}
+.ustage.done{color:var(--green);border-bottom-color:var(--green)}
+
+.flabel{font-size:11px;font-weight:800;color:var(--muted);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.5px}
+.finput{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:11px 13px;color:var(--text);font-family:'Nunito';font-size:13px;outline:none;margin-bottom:11px}
+.finput:focus{border-color:var(--gold)}
+.sub-btn{width:100%;background:var(--gold);color:#000;border:none;border-radius:11px;padding:13px;font-family:'Nunito';font-weight:800;font-size:14px;cursor:pointer;margin-top:4px}
+.sub-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* CF not configured warning */
+.cf-warn{background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.25);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--muted);line-height:1.6}
+.cf-warn strong{color:var(--gold)}
+
+/* Toast */
+.toast{position:fixed;top:18px;left:50%;transform:translateX(-50%) translateY(-90px);background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 18px;font-weight:700;font-size:13px;z-index:999;transition:transform .32s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;display:flex;align-items:center;gap:7px;box-shadow:0 4px 24px rgba(0,0,0,.5)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.tdot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.tdot.err{background:var(--red)}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+<!-- TOPBAR -->
+<div class="topbar" id="feed-topbar">
+  <div class="logo">Vaal<span>Talk</span></div>
+  <div class="topbar-tabs">
+    <div class="topbar-tab active">For You</div>
+    <div class="topbar-tab">Following</div>
+    <div class="topbar-tab">Kasies</div>
+  </div>
+  <div class="ticon" onclick="showToast('Search coming soon!')">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+  </div>
+</div>
+
+<!-- CF Stream status bar (shows on feed) -->
+<div class="cf-status-bar" id="cf-status-bar">
+  <div class="cf-pill" id="cf-pill">
+    <div class="cf-dot demo" id="cf-dot"></div>
+    <span id="cf-label">Demo Mode — Configure CF Stream</span>
+  </div>
+</div>
+
+<!-- ── PAGE: FEED ── -->
+<div class="page-fill active" id="page-feed">
+  <div class="feed-wrap" id="feed-wrap"></div>
+</div>
+
+<!-- ── PAGE: DISCOVER ── -->
+<div class="page" id="page-discover">
+  <div class="pg-header"><div><div class="pg-title">Discover</div><div class="pg-sub">Trending across the Vaal</div></div></div>
+  <div class="sbar"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" placeholder="Search creators, sounds, places..."/></div>
+  <div class="sec-hd"><div class="sec-title">Trending Now</div><div class="see-all">See All</div></div>
+  <div id="trend-list"></div>
+  <div class="sec-hd" style="margin-top:6px"><div class="sec-title">Top Creators</div><div class="see-all">See All</div></div>
+  <div class="creator-grid" id="creator-grid"></div>
+  <div style="height:16px"></div>
+</div>
+
+<!-- ── PAGE: MARKETPLACE ── -->
+<div class="page" id="page-market">
+  <div class="pg-header"><div><div class="pg-title">Marketplace</div><div class="pg-sub">Buy, sell &amp; shop local</div></div></div>
+  <div class="mkt-tab-bar">
+    <div class="mkt-tab active" id="mtab-sell" onclick="switchMkt('sell')">🛍 Kasi Sell</div>
+    <div class="mkt-tab" id="mtab-mall" onclick="switchMkt('mall')">🏬 Kasi Mall</div>
+  </div>
+  <div id="mkt-sell"><div class="mkt-grid" id="mkt-grid"></div><div style="height:16px"></div></div>
+  <div id="mkt-mall" style="display:none">
+    <div class="mall-header-banner">
+      <div class="mall-header-text"><strong>Register Your Store</strong><small>R120/month · Admin verified · Gold Badge</small></div>
+      <button class="register-btn" onclick="showToast('Store registration opening soon!')">Open Store</button>
+    </div>
+    <div id="mall-list"></div>
+    <div style="height:16px"></div>
+  </div>
+</div>
+
+<!-- ── PAGE: COMMUNITIES ── -->
+<div class="page" id="page-community">
+  <div id="kasie-main">
+    <div class="kasie-hero"><div class="kasie-hero-title">Your Kasies</div><div class="kasie-hero-sub">Hyper-local communities of the Vaal Region</div></div>
+    <div class="live-banner" onclick="showToast('Joining live session...')">
+      <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+      <div style="flex:1"><div style="font-weight:800;font-size:13px">Vereeniging Town Hall</div><div style="font-size:11px;color:var(--muted)">847 watching · Community Meeting</div></div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="2" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    </div>
+    <div class="kasie-grid" id="kasie-grid"></div>
+    <div class="req-community" onclick="showToast('Community request submitted! 0/500 votes')" style="border:1px dashed var(--border);text-align:center;padding:16px;cursor:pointer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" width="30" height="30" style="margin-bottom:6px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      <p style="font-weight:800;font-size:13px;margin-bottom:2px">Request New Community</p>
+      <small style="color:var(--muted);font-size:11px">500 votes needed to unlock</small>
+    </div>
+  </div>
+  <div id="kasie-chat-view" style="display:none"></div>
+</div>
+
+<!-- ── PAGE: PROFILE ── -->
+<div class="page" id="page-profile">
+  <div class="profile-cover" style="background-image:url('https://picsum.photos/seed/vaalcover/800/400')">
+    <div class="prof-ov"></div>
+    <div class="prof-av-wrap">
+      <div class="prof-av" style="background-image:url('https://picsum.photos/seed/user1/200/200')"></div>
+      <div class="prof-verified"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+    </div>
+  </div>
+  <div class="prof-hd">
+    <div class="prof-name">Thabo Nkosi</div>
+    <div class="prof-handle">@thabo_vaal · Vereeniging</div>
+    <div class="prof-bio">🎬 Content Creator | Vaal 🌍 | Rep'n the kasi every day 🔥</div>
+    <div class="prof-stats">
+      <div class="stat-box"><div class="snum">24.6K</div><div class="slabel">Followers</div></div>
+      <div class="stat-box"><div class="snum">891</div><div class="slabel">Following</div></div>
+      <div class="stat-box"><div class="snum">482K</div><div class="slabel">Likes</div></div>
+    </div>
+  </div>
+  <div class="prof-btns">
+    <button class="edit-btn" onclick="showToast('Edit profile coming soon!')">Edit Profile</button>
+    <div class="share-btn" onclick="showToast('Profile link copied!')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></div>
+  </div>
+  <div class="prem-badge">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    <div><strong>Premium Privacy Active</strong><small>Private profile · Enhanced security · R20/month</small></div>
+  </div>
+  <div class="prof-grid" id="prof-grid"></div>
+  <div style="margin-top:16px">
+    <div class="menu-item" onclick="navTo('admin')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="menu-item-text">Admin Dashboard</span><span class="menu-chevron">›</span></div>
+    <div class="menu-item" onclick="openCFSettings()">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <span class="menu-item-text">Cloudflare Stream Setup</span>
+      <span id="cf-menu-status" style="font-size:10px;font-weight:800;color:var(--muted)">Not Connected</span>
+    </div>
+    <div class="menu-item" onclick="showToast('Settings coming soon!')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="menu-item-text">Settings &amp; Privacy</span><span class="menu-chevron">›</span></div>
+    <div class="menu-item" onclick="navTo('market');switchMkt('mall')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="menu-item-text">My Kasi Mall Store</span><span class="menu-chevron">›</span></div>
+    <div class="menu-item" onclick="showToast('Logged out. See you!')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke="var(--red)"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span class="menu-item-text" style="color:var(--red)">Log Out</span><span class="menu-chevron">›</span></div>
+  </div>
+  <div style="height:16px"></div>
+</div>
+
+<!-- ── PAGE: ADMIN ── -->
+<div class="page" id="page-admin">
+  <div class="admin-wrap">
+    <div class="admin-hd">
+      <div class="admin-back" onclick="navTo('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2" width="17" height="17"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></div>
+      <div><div class="admin-title"><span>Admin</span> Panel</div><div style="font-size:11px;color:var(--muted)">Vaal Talk Management Console</div></div>
+    </div>
+    <div class="stat-cards">
+      <div class="scard"><div class="scard-label">Total Users</div><div class="scard-num" style="color:var(--gold)">14,872</div><div class="scard-change" style="color:var(--green)">+342 today</div></div>
+      <div class="scard"><div class="scard-label">Active Now</div><div class="scard-num" style="color:var(--blue)">1,247</div><div class="scard-change" style="color:var(--muted)">Live sessions</div></div>
+      <div class="scard"><div class="scard-label">Pending Reports</div><div class="scard-num" style="color:var(--red)">38</div><div class="scard-change" style="color:var(--red)">6 high risk</div></div>
+      <div class="scard"><div class="scard-label">Total Videos</div><div class="scard-num" style="color:var(--green)">92,481</div><div class="scard-change" style="color:var(--muted)">+1.2K today</div></div>
+    </div>
+
+    <!-- CF Stream Stats in Admin -->
+    <div class="admin-sec">
+      <div class="admin-sec-title">Cloudflare Stream</div>
+      <div style="background:var(--surface2);border-radius:12px;border:1px solid rgba(245,166,35,.2);padding:14px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" width="18" height="18"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <div>
+            <div style="font-weight:800;font-size:13px">Stream Status</div>
+            <div style="font-size:11px;color:var(--muted)" id="admin-cf-status">Not configured</div>
+          </div>
+          <button onclick="openCFSettings()" style="margin-left:auto;background:var(--gold);color:#000;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:800;cursor:pointer">Configure</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:var(--surface3);border-radius:9px;padding:10px;text-align:center"><div style="font-family:'Bebas Neue';font-size:24px;color:var(--gold)" id="admin-video-count">—</div><div style="font-size:10px;color:var(--muted)">Videos Stored</div></div>
+          <div style="background:var(--surface3);border-radius:9px;padding:10px;text-align:center"><div style="font-family:'Bebas Neue';font-size:24px;color:var(--green)" id="admin-storage">—</div><div style="font-size:10px;color:var(--muted)">Storage Used</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-sec"><div class="admin-sec-title">Moderation Queue</div><div id="reports-list"></div></div>
+    <div class="admin-sec">
+      <div class="admin-sec-title">Kasi Mall Approvals</div>
+      <div style="background:var(--surface2);border-radius:12px;padding:13px;border:1px solid var(--border);display:flex;align-items:center;gap:11px">
+        <div class="mall-logo" style="width:46px;height:46px;font-size:13px">KF</div>
+        <div style="flex:1"><div style="font-weight:800;font-size:13px">Kasi Flavours</div><div style="font-size:11px;color:var(--muted)">Food &amp; Catering · Vereeniging</div></div>
+        <div style="display:flex;gap:6px">
+          <button onclick="showToast('Store approved ✓')" style="background:rgba(0,200,83,.15);color:var(--green);border:none;border-radius:8px;padding:7px 10px;font-size:11px;font-weight:800;cursor:pointer">Approve</button>
+          <button onclick="showToast('Store rejected')" style="background:rgba(255,59,48,.1);color:var(--red);border:none;border-radius:8px;padding:7px 10px;font-size:11px;font-weight:800;cursor:pointer">Reject</button>
+        </div>
+      </div>
+    </div>
+    <div style="height:16px"></div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav" id="bottom-nav">
+  <div class="nav-item active" id="nav-feed" onclick="navTo('feed')">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="2" y="3" width="9" height="9" rx="2"/><rect x="13" y="3" width="9" height="9" rx="2"/><rect x="2" y="14" width="9" height="9" rx="2"/><rect x="13" y="14" width="9" height="9" rx="2"/></svg>
+    <span>Feed</span>
+  </div>
+  <div class="nav-item" id="nav-market" onclick="navTo('market')">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+    <span>Market</span>
+  </div>
+  <div class="nav-upload" onclick="openUpload()">
+    <div class="nav-upload-btn"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+    <span>Post</span>
+  </div>
+  <div class="nav-item" id="nav-community" onclick="navTo('community')">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span>Kasies</span>
+  </div>
+  <div class="nav-item" id="nav-profile" onclick="navTo('profile')">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span>Profile</span>
+  </div>
+</nav>
+
+<!-- FAB: Sell item -->
+<div class="sell-fab" id="sell-fab" onclick="openModal('sell-modal')">
+  <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</div>
+
+<!-- MODAL: CF Stream Settings -->
+<div class="modal-ov hidden" id="cf-modal" onclick="closeModal('cf-modal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="mhandle"></div>
+    <div class="mtitle">
+      ⚡ Cloudflare Stream Setup
+    </div>
+    <div style="padding:16px">
+      <div style="background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.2);border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--muted);line-height:1.6">
+        <strong style="color:var(--gold)">How it works:</strong> Deploy the included <code style="background:var(--surface3);padding:1px 5px;border-radius:4px">cf-stream-worker.js</code> as a Cloudflare Worker. It generates one-time TUS upload URLs without exposing your API token to the browser.
+      </div>
+      <label class="cf-label">Worker URL</label>
+      <input class="cf-input" id="cf-worker-url" placeholder="https://your-worker.workers.dev" style="margin-bottom:12px"/>
+      <label class="cf-label" style="margin-top:4px">Account ID <span style="color:var(--muted);font-weight:400;text-transform:none">(for stream player embed)</span></label>
+      <input class="cf-input" id="cf-account-id" placeholder="Your Cloudflare Account ID" style="margin-bottom:16px"/>
+      <button class="cf-save-btn" onclick="saveCFConfig()">Save &amp; Connect</button>
+      <button class="cf-test-btn" onclick="testCFConnection()">Test Connection</button>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Worker Setup Commands</div>
+        <div style="background:var(--bg);border-radius:8px;padding:12px;font-family:monospace;font-size:11px;color:var(--gold);line-height:2">
+          npm install -g wrangler<br/>
+          wrangler login<br/>
+          wrangler secret put CF_ACCOUNT_ID<br/>
+          wrangler secret put CF_API_TOKEN<br/>
+          wrangler deploy
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Upload Video (with CF Stream TUS upload) -->
+<div class="modal-ov hidden" id="upload-modal" onclick="closeModal('upload-modal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="mhandle"></div>
+    <div class="upload-body">
+      <div class="upload-title">Post a Video</div>
+
+      <!-- Upload stages -->
+      <div class="upload-stages">
+        <div class="ustage active" id="stage-1">1. Select</div>
+        <div class="ustage" id="stage-2">2. Upload</div>
+        <div class="ustage" id="stage-3">3. Publish</div>
+      </div>
+
+      <!-- CF not configured warning -->
+      <div class="cf-warn" id="cf-upload-warn" style="display:none">
+        ⚠️ <strong>Cloudflare Stream not connected.</strong> Go to Profile → Cloudflare Stream Setup to configure. Without it, uploads won't work.
+      </div>
+
+      <!-- Drop zone -->
+      <div class="dropzone" id="dropzone">
+        <input type="file" accept="video/*" onchange="onFileSelected(this)"/>
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+        <p>Tap to select video</p>
+        <small>MP4 · MOV · Up to 100MB · Max 3 mins</small>
+      </div>
+
+      <!-- Progress -->
+      <div class="upload-progress" id="upload-progress">
+        <div class="progress-header">
+          <div class="progress-file">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" width="16" height="16"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+            <span id="progress-filename">video.mp4</span>
+          </div>
+          <div class="progress-pct" id="progress-pct">0%</div>
+        </div>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+        <div class="progress-status" id="progress-status">Connecting to Cloudflare Stream...</div>
+      </div>
+
+      <!-- Metadata fields -->
+      <label class="flabel">Caption</label>
+      <input class="finput" id="upload-caption" placeholder="Describe your video..."/>
+      <label class="flabel">Community</label>
+      <select class="finput" id="upload-community" style="appearance:none">
+        <option>Vereeniging</option><option>Rust-Ter-Vaal</option><option>Meyerton</option><option>Roshnee</option><option>De Deur</option>
+      </select>
+      <label class="flabel">Tags</label>
+      <input class="finput" id="upload-tags" placeholder="#VaalVibes #Kasi ..."/>
+      <button class="sub-btn" id="upload-submit-btn" onclick="startUpload()" disabled>Select a video first</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Comments -->
+<div class="modal-ov hidden" id="comment-modal" onclick="closeModal('comment-modal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="mhandle"></div>
+    <div class="mtitle">Comments <span style="color:var(--muted);font-weight:400;font-size:12px">(248)</span></div>
+    <div id="comments-list"></div>
+    <div class="cinput-row">
+      <div class="cav" style="background-image:url('https://picsum.photos/seed/user1/100/100')"></div>
+      <input class="cfield" placeholder="Add a comment..."/>
+      <button class="cpost-btn" onclick="showToast('Comment posted!')">Post</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Sell Item -->
+<div class="modal-ov hidden" id="sell-modal" onclick="closeModal('sell-modal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="mhandle"></div>
+    <div class="upload-body">
+      <div class="upload-title">List Item for Sale</div>
+      <label class="flabel">Item Title</label><input class="finput" placeholder="What are you selling?"/>
+      <label class="flabel">Price (R)</label><input class="finput" type="number" placeholder="0.00"/>
+      <label class="flabel">Description</label><input class="finput" placeholder="Condition, size, details..."/>
+      <label class="flabel">Category</label>
+      <select class="finput" style="appearance:none"><option>Electronics</option><option>Clothing</option><option>Furniture</option><option>Food</option><option>Services</option><option>Vehicles</option></select>
+      <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:9px;padding:10px;margin-bottom:12px;font-size:12px;color:var(--muted)">💡 Platform fee: <strong style="color:var(--gold)">4.5%</strong> on successful sale. Payments via PayFast / Ozow.</div>
+      <button class="sub-btn" onclick="showToast('Item listed successfully!');closeModal('sell-modal')">List Item</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><div class="tdot" id="tdot"></div><span id="tmsg"></span></div>
+</div><!-- end .app -->
+
+<script>
+// ─────────────────────────────────────────────────────
+//  APP STATE
+// ─────────────────────────────────────────────────────
+const state = {
+  cf: {
+    workerUrl: localStorage.getItem('cf_worker_url') || '',
+    accountId: localStorage.getItem('cf_account_id') || '',
+    connected: false,
+  },
+  // Videos in the feed — uid is null in demo mode
+  feedVideos: [
+    {user:'Lerato_Dlamini',loc:'Vereeniging',desc:'This braai hits different on a Sunday 🔥🥩 nothing like it in the Vaal',tags:['#VaalVibes','#Braai','#SundayMood'],likes:'142.4K',comments:'2.8K',shares:'18.2K',img:'https://picsum.photos/seed/vf1/400/700',uid:null,liked:false,following:false},
+    {user:'Sipho_Beats',loc:'Rust-Ter-Vaal',desc:'New amapiano beat just dropped 🎵✨ produced right here in the kasi',tags:['#Amapiano','#Kasi','#NewMusic'],likes:'89.1K',comments:'1.4K',shares:'42.7K',img:'https://picsum.photos/seed/vf2/400/700',uid:null,liked:true,following:true},
+    {user:'NomvulaTV',loc:'Meyerton',desc:'POV: Saturday at Meyerton mall with the squad 🛍️💅🏾',tags:['#Meyerton','#MallVibes','#Squad'],likes:'54.8K',comments:'987',shares:'8.9K',img:'https://picsum.photos/seed/vf3/400/700',uid:null,liked:false,following:false},
+    {user:'Thabo_Nkosi',loc:'Vereeniging',desc:'Teaching my little bro how to drive 😂🚗 Vaal roads certified!',tags:['#Family','#Vaal','#Funny'],likes:'220.3K',comments:'4.2K',shares:'67.1K',img:'https://picsum.photos/seed/vf4/400/700',uid:null,liked:false,following:true},
+    {user:'Zinhle_Creates',loc:'Roshnee',desc:'Homemade fat cakes recipe that will change your life 🍩✨ Watch till end',tags:['#FatCakes','#Recipe','#KasiFood'],likes:'312.9K',comments:'6.7K',shares:'98.4K',img:'https://picsum.photos/seed/vf5/400/700',uid:null,liked:false,following:false},
+    {user:'VaalKid_Chris',loc:'De Deur',desc:'Sunrise from the Vaal Dam this morning 🌅 God is good 🙏🏾',tags:['#VaalDam','#Sunrise','#Blessed'],likes:'78.6K',comments:'1.1K',shares:'22.3K',img:'https://picsum.photos/seed/vf6/400/700',uid:null,liked:true,following:false},
+  ],
+  uploadFile: null,
+  uploadUid: null,
+  tusUpload: null,
+};
+
+// ─────────────────────────────────────────────────────
+//  CLOUDFLARE STREAM CONFIG
+// ─────────────────────────────────────────────────────
+function saveCFConfig() {
+  const workerUrl = document.getElementById('cf-worker-url').value.trim().replace(/\/$/, '');
+  const accountId = document.getElementById('cf-account-id').value.trim();
+  if (!workerUrl) { showToast('Enter your Worker URL', true); return; }
+  state.cf.workerUrl = workerUrl;
+  state.cf.accountId = accountId;
+  localStorage.setItem('cf_worker_url', workerUrl);
+  localStorage.setItem('cf_account_id', accountId);
+  showToast('Config saved! Testing connection...');
+  closeModal('cf-modal');
+  testCFConnection(true);
+}
+
+async function testCFConnection(silent = false) {
+  const url = state.cf.workerUrl;
+  if (!url) { if (!silent) showToast('No Worker URL configured', true); return; }
+  try {
+    // Ping the worker with a simple GET — our worker returns 404 for GET /
+    // but a successful response means CORS + connectivity is working
+    const res = await fetch(url + '/videos', { method: 'GET' });
+    if (res.ok || res.status === 404) {
+      setCFConnected(true);
+      if (!silent) showToast('Connected to Cloudflare Stream ✓');
+    } else {
+      throw new Error('HTTP ' + res.status);
+    }
+  } catch (e) {
+    setCFConnected(false);
+    if (!silent) showToast('Connection failed: ' + e.message, true);
+  }
+}
+
+function setCFConnected(ok) {
+  state.cf.connected = ok;
+  // Update feed status bar
+  const dot  = document.getElementById('cf-dot');
+  const lbl  = document.getElementById('cf-label');
+  const menu = document.getElementById('cf-menu-status');
+  const adminSt = document.getElementById('admin-cf-status');
+  if (ok) {
+    dot.className = 'cf-dot';
+    lbl.textContent = 'Cloudflare Stream Connected';
+    if (menu) { menu.textContent = 'Connected'; menu.style.color = 'var(--green)'; }
+    if (adminSt) { adminSt.textContent = 'Connected · Worker Active'; adminSt.style.color = 'var(--green)'; }
+    document.getElementById('admin-video-count').textContent = '—';
+    document.getElementById('admin-storage').textContent = 'Live';
+  } else {
+    dot.className = 'cf-dot demo';
+    lbl.textContent = 'Demo Mode — Configure CF Stream';
+    if (menu) { menu.textContent = 'Not Connected'; menu.style.color = 'var(--muted)'; }
+  }
+}
+
+function openCFSettings() {
+  document.getElementById('cf-worker-url').value = state.cf.workerUrl;
+  document.getElementById('cf-account-id').value = state.cf.accountId;
+  openModal('cf-modal');
+}
+
+// ─────────────────────────────────────────────────────
+//  BUILD FEED (with CF Stream player or placeholder)
+// ─────────────────────────────────────────────────────
+function buildFeed() {
+  const wrap = document.getElementById('feed-wrap');
+  state.feedVideos.forEach((v, i) => {
+    const card = document.createElement('div');
+    card.className = 'video-card';
+    card.dataset.index = i;
+
+    // ── Video area: CF Stream player if uid exists, else placeholder ──
+    if (v.uid) {
+      // Real CF Stream player using the <stream> custom element
+      card.innerHTML = `
+        <stream class="stream-player"
+          src="${v.uid}"
+          autoplay muted loop playsinline
+          style="position:absolute;inset:0;width:100%;height:100%;border:none"
+        ></stream>
+        ${videoOverlay(v, i)}`;
+    } else {
+      // Demo placeholder with background image
+      card.innerHTML = `
+        <div class="video-placeholder">
+          <div class="video-placeholder-bg" style="background-image:url('${v.img}')"></div>
+          <div class="video-placeholder-content">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+            <p>Video Player</p>
+            <small>Configure Cloudflare Stream<br/>to enable real video playback</small>
+            <div class="cf-badge" onclick="openCFSettings()">
+              ⚡ Setup CF Stream
+            </div>
+          </div>
+        </div>
+        <div class="vov"></div>
+        ${videoOverlay(v, i)}`;
+    }
+    wrap.appendChild(card);
+  });
+
+  // IntersectionObserver: auto-play/pause CF Stream players on scroll
+  setupVideoObserver();
+}
+
+function videoOverlay(v, i) {
+  return `
+    <div class="vinfo">
+      <div class="vuser">
+        <div class="vavatar" style="background-image:url('https://picsum.photos/seed/vu${i}/100/100')"></div>
+        <span class="vname">${v.user}</span>
+        <span class="vloc">${v.loc}</span>
+        ${!v.following ? `<span class="fchip" onclick="vF(${i},this)">+ Follow</span>` : ''}
+      </div>
+      <div class="vdesc">${v.desc}</div>
+      <div class="vtags">${v.tags.map(t => `<span>${t}</span>`).join('')}</div>
+    </div>
+    <div class="vactions">
+      <div class="abtn ${v.liked ? 'liked' : ''}" id="lb${i}" onclick="vL(${i},this)">
+        <svg viewBox="0 0 24 24" fill="${v.liked ? 'var(--red)' : 'none'}" stroke="${v.liked ? 'var(--red)' : '#fff'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        <span>${v.likes}</span>
+      </div>
+      <div class="abtn" onclick="openModal('comment-modal')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>${v.comments}</span>
+      </div>
+      <div class="abtn" onclick="showToast('Link copied!')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        <span>${v.shares}</span>
+      </div>
+      <div class="abtn" onclick="showToast('Saved!')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        <span>Save</span>
+      </div>
+      <div class="abtn" onclick="showToast('Reported. Admin will review.')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>Report</span>
+      </div>
+    </div>`;
+}
+
+// IntersectionObserver — pause/play CF Stream elements as cards scroll in/out
+function setupVideoObserver() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const streamEl = entry.target.querySelector('stream');
+      if (!streamEl) return;
+      // Use CF Stream SDK to control playback
+      if (typeof Stream !== 'undefined') {
+        try {
+          const player = Stream(streamEl);
+          if (entry.isIntersecting) {
+            player.play().catch(() => {});
+          } else {
+            player.pause();
+          }
+        } catch(e) {}
+      }
+    });
+  }, { threshold: 0.6 });
+
+  document.querySelectorAll('.video-card').forEach(card => observer.observe(card));
+}
+
+function vL(i, el) {
+  state.feedVideos[i].liked = !state.feedVideos[i].liked;
+  const s = el.querySelector('svg');
+  if (state.feedVideos[i].liked) {
+    el.classList.add('liked');
+    s.setAttribute('fill', 'var(--red)');
+    s.setAttribute('stroke', 'var(--red)');
+  } else {
+    el.classList.remove('liked');
+    s.setAttribute('fill', 'none');
+    s.setAttribute('stroke', '#fff');
+  }
+}
+function vF(i, el) { state.feedVideos[i].following = true; el.style.display = 'none'; showToast('Following ' + state.feedVideos[i].user + ' ✓'); }
+
+// ─────────────────────────────────────────────────────
+//  TUS UPLOAD via CF Worker
+// ─────────────────────────────────────────────────────
+function onFileSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  state.uploadFile = file;
+
+  // Check CF connected
+  const warn = document.getElementById('cf-upload-warn');
+  const btn  = document.getElementById('upload-submit-btn');
+  if (!state.cf.workerUrl) {
+    warn.style.display = 'block';
+    btn.disabled = true;
+    btn.textContent = 'Configure CF Stream first';
+    return;
+  }
+
+  warn.style.display = 'none';
+  btn.disabled = false;
+  btn.textContent = `Upload: ${file.name}`;
+  setStage(1);
+
+  // Show dropzone feedback
+  const dz = document.getElementById('dropzone');
+  dz.querySelector('p').textContent = '✓ ' + file.name;
+  dz.querySelector('small').textContent = formatBytes(file.size) + ' · Ready to upload';
+}
+
+async function startUpload() {
+  const file = state.uploadFile;
+  if (!file) { showToast('Select a video first', true); return; }
+  if (!state.cf.workerUrl) { showToast('Configure Cloudflare Stream first', true); return; }
+
+  const btn = document.getElementById('upload-submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Uploading...';
+
+  setStage(2);
+  showProgress(true);
+  setProgressStatus('Requesting upload URL from Cloudflare...');
+
+  try {
+    // ── Step 1: Get one-time upload URL from our CF Worker ──
+    const urlRes = await fetch(state.cf.workerUrl + '/upload-url', {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Upload-Length': String(file.size),
+        'Upload-Creator': 'thabo_vaal', // In production: real user ID
+      },
+      body: JSON.stringify({
+        fileSize: file.size,
+        fileName: file.name,
+        creator:  'thabo_vaal',
+      }),
+    });
+
+    if (!urlRes.ok) throw new Error('Worker returned ' + urlRes.status);
+    const { uploadUrl, videoUid } = await urlRes.json();
+
+    if (!uploadUrl) throw new Error('No upload URL received from Worker');
+
+    state.uploadUid = videoUid;
+    setProgressStatus('Starting TUS resumable upload...');
+
+    // ── Step 2: TUS upload directly to Cloudflare Stream ──
+    const upload = new tus.Upload(file, {
+      uploadUrl: uploadUrl,   // Direct to CF Stream — no auth needed
+      retryDelays: [0, 3000, 5000, 10000, 20000],
+      chunkSize: 52428800,    // 50MB chunks (CF minimum is 5MB)
+      metadata: {
+        name:     file.name,
+        filetype: file.type,
+      },
+      onError: (error) => {
+        console.error('TUS upload error:', error);
+        setProgressStatus('Upload failed: ' + error.message, 'err');
+        btn.disabled = false;
+        btn.textContent = 'Retry Upload';
+        showToast('Upload failed', true);
+      },
+      onProgress: (bytesUploaded, bytesTotal) => {
+        const pct = Math.round((bytesUploaded / bytesTotal) * 100);
+        document.getElementById('progress-bar').style.width = pct + '%';
+        document.getElementById('progress-pct').textContent = pct + '%';
+        document.getElementById('progress-filename').textContent = file.name;
+        setProgressStatus(`Uploading to Cloudflare Stream… ${formatBytes(bytesUploaded)} / ${formatBytes(bytesTotal)}`);
+      },
+      onSuccess: () => {
+        onUploadComplete(videoUid, file.name);
+      },
+    });
+
+    state.tusUpload = upload;
+    upload.start();
+
+  } catch (err) {
+    console.error('Upload setup error:', err);
+    setProgressStatus('Error: ' + err.message, 'err');
+    btn.disabled = false;
+    btn.textContent = 'Retry Upload';
+    showToast('Upload error: ' + err.message, true);
+  }
+}
+
+function onUploadComplete(videoUid, fileName) {
+  setStage(3);
+  document.getElementById('progress-bar').style.width = '100%';
+  document.getElementById('progress-pct').textContent = '100%';
+  setProgressStatus('Upload complete! Processing on Cloudflare...', 'done');
+
+  const caption   = document.getElementById('upload-caption').value || 'New video from Vaal Talk';
+  const community = document.getElementById('upload-community').value;
+  const tags      = document.getElementById('upload-tags').value.split(' ').filter(Boolean);
+
+  // Poll for readyToStream, then add to feed
+  pollVideoReady(videoUid, () => {
+    // Add new video to top of feed
+    const newVideo = {
+      user:      'Thabo_Nkosi',
+      loc:       community,
+      desc:      caption,
+      tags:      tags.length ? tags : ['#VaalTalk'],
+      likes:     '0',
+      comments:  '0',
+      shares:    '0',
+      img:       '',
+      uid:       videoUid,   // Real CF Stream UID
+      liked:     false,
+      following: false,
+    };
+    state.feedVideos.unshift(newVideo);
+
+    showToast('Video live on Vaal Talk! 🔥');
+    closeModal('upload-modal');
+    resetUploadForm();
+
+    // Rebuild feed so new video appears
+    const wrap = document.getElementById('feed-wrap');
+    wrap.innerHTML = '';
+    buildFeed();
+    navTo('feed');
+  });
+}
+
+async function pollVideoReady(uid, onReady) {
+  setProgressStatus('Waiting for Cloudflare to process video...', '');
+  let attempts = 0;
+  const maxAttempts = 30; // 30 × 3s = 90s max
+
+  const poll = async () => {
+    if (attempts++ > maxAttempts) {
+      showToast('Video uploaded! May take a moment to appear.');
+      onReady();
+      return;
+    }
+    try {
+      const res = await fetch(state.cf.workerUrl + '/video/' + uid);
+      const data = await res.json();
+      if (data.readyToStream) {
+        onReady();
+      } else {
+        setProgressStatus(`Processing video... (${attempts}/${maxAttempts})`, '');
+        setTimeout(poll, 3000);
+      }
+    } catch (e) {
+      // If polling fails, still add to feed
+      onReady();
+    }
+  };
+  poll();
+}
+
+// ── Upload UI helpers ──
+function setStage(n) {
+  [1,2,3].forEach(i => {
+    const el = document.getElementById('stage-' + i);
+    if (!el) return;
+    el.className = 'ustage' + (i < n ? ' done' : i === n ? ' active' : '');
+  });
+}
+function showProgress(show) {
+  document.getElementById('upload-progress').classList.toggle('show', show);
+  document.getElementById('dropzone').style.display = show ? 'none' : 'block';
+}
+function setProgressStatus(msg, type = '') {
+  const el = document.getElementById('progress-status');
+  el.textContent = msg;
+  el.className = 'progress-status' + (type ? ' ' + type : '');
+}
+function resetUploadForm() {
+  state.uploadFile = null;
+  state.uploadUid = null;
+  state.tusUpload = null;
+  document.getElementById('upload-caption').value = '';
+  document.getElementById('upload-tags').value = '';
+  const dz = document.getElementById('dropzone');
+  dz.querySelector('p').textContent = 'Tap to select video';
+  dz.querySelector('small').textContent = 'MP4 · MOV · Up to 100MB · Max 3 mins';
+  showProgress(false);
+  setStage(1);
+  const btn = document.getElementById('upload-submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Select a video first';
+}
+function formatBytes(b) {
+  if (b < 1024) return b + 'B';
+  if (b < 1048576) return (b/1024).toFixed(1) + 'KB';
+  return (b/1048576).toFixed(1) + 'MB';
+}
+function openUpload() {
+  resetUploadForm();
+  // Show warning if CF not configured
+  const warn = document.getElementById('cf-upload-warn');
+  warn.style.display = state.cf.workerUrl ? 'none' : 'block';
+  openModal('upload-modal');
+}
+
+// ─────────────────────────────────────────────────────
+//  DISCOVER
+// ─────────────────────────────────────────────────────
+const TRENDS=[
+  {tag:'#VaalVibes',count:'1.2M videos',img:'https://picsum.photos/seed/tr1/100/100'},
+  {tag:'#Amapiano',count:'4.7M videos',img:'https://picsum.photos/seed/tr2/100/100'},
+  {tag:'#KasiFood',count:'891K videos',img:'https://picsum.photos/seed/tr3/100/100'},
+  {tag:'#VaalDam',count:'334K videos',img:'https://picsum.photos/seed/tr4/100/100'},
+];
+const CREATORS=[
+  {name:'Lerato Dlamini',followers:'142K',img:'https://picsum.photos/seed/cr1/200/200',banner:'https://picsum.photos/seed/bn1/300/150',following:false},
+  {name:'Sipho Beats',followers:'89.1K',img:'https://picsum.photos/seed/cr2/200/200',banner:'https://picsum.photos/seed/bn2/300/150',following:true},
+  {name:'Nomvula TV',followers:'54.8K',img:'https://picsum.photos/seed/cr3/200/200',banner:'https://picsum.photos/seed/bn3/300/150',following:false},
+  {name:'Zinhle Creates',followers:'312K',img:'https://picsum.photos/seed/cr4/200/200',banner:'https://picsum.photos/seed/bn4/300/150',following:false},
+];
+function buildDiscover(){
+  const tl=document.getElementById('trend-list');
+  TRENDS.forEach((t,i)=>{const d=document.createElement('div');d.className='trend-item';d.innerHTML=`<div class="trend-rank ${i<3?'top':''}">${String(i+1).padStart(2,'0')}</div><div style="flex:1"><div class="trend-tag">${t.tag}</div><div class="trend-count">${t.count}</div></div><div class="trend-thumb" style="background-image:url('${t.img}')"></div>`;d.onclick=()=>showToast('Exploring '+t.tag+'...');tl.appendChild(d);});
+  const cg=document.getElementById('creator-grid');
+  CREATORS.forEach((c,i)=>{const d=document.createElement('div');d.className='creator-card';d.innerHTML=`<div class="creator-banner" style="background-image:url('${c.banner}')"></div><div class="creator-body"><div class="creator-av" style="background-image:url('${c.img}')"></div><div class="creator-name">${c.name}</div><div class="creator-stats">${c.followers} followers</div><button class="follow-btn ${c.following?'following':''}" id="cfb${i}" onclick="cF(${i})">${c.following?'Following':'Follow'}</button></div>`;cg.appendChild(d);});
+}
+function cF(i){CREATORS[i].following=!CREATORS[i].following;const b=document.getElementById('cfb'+i);b.className='follow-btn'+(CREATORS[i].following?' following':'');b.textContent=CREATORS[i].following?'Following':'Follow';showToast(CREATORS[i].following?'Following '+CREATORS[i].name+' ✓':'Unfollowed '+CREATORS[i].name);}
+
+// ─────────────────────────────────────────────────────
+//  MARKETPLACE
+// ─────────────────────────────────────────────────────
+const MKT=[
+  {title:'iPhone 13 Pro',price:'R 8,500',seller:'Sipho · Vereeniging',badge:'hot',img:'https://picsum.photos/seed/p1/300/300'},
+  {title:'Couch Set (3+2)',price:'R 3,200',seller:'Nomvula · Meyerton',badge:'new',img:'https://picsum.photos/seed/p2/300/300'},
+  {title:'Air Max 95',price:'R 1,800',seller:'Chris · De Deur',badge:'',img:'https://picsum.photos/seed/p3/300/300'},
+  {title:'Samsung 50" TV',price:'R 6,500',seller:'Lerato · Rust-Ter-Vaal',badge:'hot',img:'https://picsum.photos/seed/p4/300/300'},
+  {title:'Baby Clothes Bundle',price:'R 350',seller:'Zinhle · Roshnee',badge:'new',img:'https://picsum.photos/seed/p5/300/300'},
+  {title:'Gaming Chair',price:'R 2,100',seller:'Thabo · Vereeniging',badge:'',img:'https://picsum.photos/seed/p6/300/300'},
+];
+const MALL=[
+  {name:'Kasi Cuts Barber',cat:'Beauty & Grooming',rating:'4.9',reviews:'287',gold:true,init:'KC',open:true},
+  {name:'Vaal Auto Parts',cat:'Automotive',rating:'4.7',reviews:'142',gold:true,init:'VA',open:true},
+  {name:"Mama Thandi's Kitchen",cat:'Food & Catering',rating:'5.0',reviews:'621',gold:false,init:'MK',open:true},
+  {name:'Tech Fix Vaal',cat:'Electronics Repair',rating:'4.6',reviews:'98',gold:true,init:'TF',open:false},
+  {name:'Vaal Fresh Produce',cat:'Groceries & Food',rating:'4.8',reviews:'203',gold:false,init:'VF',open:true},
+];
+function buildMarket(){
+  const g=document.getElementById('mkt-grid');
+  MKT.forEach(item=>{const d=document.createElement('div');d.className='mkt-card';d.innerHTML=`<div class="mkt-img" style="background-image:url('${item.img}')">${item.badge?`<div class="mkt-badge ${item.badge}">${item.badge.toUpperCase()}</div>`:''}</div><div class="mkt-body"><div class="mkt-title">${item.title}</div><div class="mkt-price">${item.price}</div><div class="mkt-seller">${item.seller}</div></div>`;d.onclick=()=>showToast('Opening '+item.title+'...');g.appendChild(d);});
+  const ml=document.getElementById('mall-list');
+  MALL.forEach(s=>{const d=document.createElement('div');d.className='mall-card';d.innerHTML=`<div class="mall-logo">${s.init}</div><div class="mall-info"><div class="mall-name">${s.name}${s.gold?'<span class="gbadge">GOLD</span>':''}</div><div class="mall-cat">${s.cat}</div><div class="mall-rating"><svg viewBox="0 0 24 24" width="12" height="12"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>${s.rating} · ${s.reviews} reviews</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:10px;font-weight:700;color:${s.open?'var(--green)':'var(--red)'}">${s.open?'Open':'Closed'}</div></div>`;d.onclick=()=>showToast('Opening '+s.name+'...');ml.appendChild(d);});
+}
+function switchMkt(tab){
+  document.getElementById('mtab-sell').classList.toggle('active',tab==='sell');
+  document.getElementById('mtab-mall').classList.toggle('active',tab==='mall');
+  document.getElementById('mkt-sell').style.display=tab==='sell'?'block':'none';
+  document.getElementById('mkt-mall').style.display=tab==='mall'?'block':'none';
+}
+
+// ─────────────────────────────────────────────────────
+//  COMMUNITIES
+// ─────────────────────────────────────────────────────
+const KASIES=[
+  {name:'Vereeniging',members:14872,max:15000,joined:true,unlocked:true},
+  {name:'Rust-Ter-Vaal',members:8241,max:10000,joined:false,unlocked:true},
+  {name:'Meyerton',members:5634,max:6000,joined:true,unlocked:true},
+  {name:'Roshnee',members:3812,max:5000,joined:false,unlocked:false},
+  {name:'De Deur',members:2156,max:5000,joined:false,unlocked:false},
+  {name:'Bophelong',members:312,max:500,joined:false,unlocked:false},
+];
+const CHAT=[
+  {user:'Sipho_B',text:"Yooo check the load-shedding schedule for tomorrow",time:'10:02',mine:false,img:'https://picsum.photos/seed/ch1/100/100'},
+  {user:'Lerato_D',text:"Stage 4 again 😭 I'm so tired man",time:'10:03',mine:false,img:'https://picsum.photos/seed/ch2/100/100'},
+  {user:'You',text:'The generator at the community hall will be running. Come through for the meeting!',time:'10:05',mine:true},
+  {user:'NomvulaTV',text:'What time is the town hall meeting?',time:'10:07',mine:false,img:'https://picsum.photos/seed/ch3/100/100'},
+  {user:'You',text:'6pm sharp. Live stream also on Vaal Talk tonight 🔴',time:'10:08',mine:true},
+  {user:'VaalAdmin',text:'📢 Reminder: Community meeting tonight. All members welcome!',time:'10:10',mine:false,img:'https://picsum.photos/seed/ch4/100/100'},
+];
+function buildKasies(){
+  const g=document.getElementById('kasie-grid');
+  KASIES.forEach(k=>{const pct=Math.round((k.members/k.max)*100);const d=document.createElement('div');d.className='kasie-card'+(k.joined?' joined':'');d.innerHTML=`<div class="kasie-name">${k.name}</div><div class="kasie-members">${k.members.toLocaleString()} members</div>${!k.unlocked?`<div class="kasie-prog"><div class="kasie-progbar" style="width:${pct}%"></div></div>`:''}<div class="kasie-chat ${k.unlocked?'on':'off'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="9" height="9"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>${k.unlocked?'Chat Active':pct+'% to chat'}</div>`;d.onclick=()=>openKasieChat(k);g.appendChild(d);});
+}
+function openKasieChat(k){
+  if(!k.unlocked){showToast(k.name+' needs '+k.max.toLocaleString()+' members for chat');return}
+  document.getElementById('kasie-main').style.display='none';
+  const cv=document.getElementById('kasie-chat-view');cv.style.display='block';
+  cv.innerHTML=`<div class="chat-wrap"><div class="chat-hd"><div class="chat-back" onclick="closeKasieChat()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="17" height="17"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></div><div style="flex:1"><div style="font-weight:800;font-size:15px">${k.name} Community</div><div style="font-size:11px;color:var(--green)">● ${k.members.toLocaleString()} members</div></div></div><div class="chat-msgs" id="cmsgs">${CHAT.map(m=>`<div class="msg-row ${m.mine?'mine':''}">${!m.mine?`<div class="mavatar" style="background-image:url('${m.img}')"></div>`:''}<div>${!m.mine?`<div class="mname">${m.user}</div>`:''}<div class="mbubble">${m.text}</div><div class="mtime">${m.time}</div></div></div>`).join('')}</div><div class="chat-input-bar"><input class="cinput-msg" id="cinp" placeholder="Message ${k.name}..." onkeypress="if(event.key==='Enter')sendChat()"/><button class="csend" onclick="sendChat()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div></div>`;
+  setTimeout(()=>{const m=document.getElementById('cmsgs');if(m)m.scrollTop=m.scrollHeight;},80);
+}
+function closeKasieChat(){document.getElementById('kasie-main').style.display='block';const cv=document.getElementById('kasie-chat-view');cv.style.display='none';cv.innerHTML='';}
+function sendChat(){const i=document.getElementById('cinp');const t=i.value.trim();if(!t)return;const m=document.getElementById('cmsgs');const d=document.createElement('div');d.className='msg-row mine';d.innerHTML=`<div><div class="mbubble">${t}</div><div class="mtime">now</div></div>`;m.appendChild(d);i.value='';m.scrollTop=m.scrollHeight;}
+
+// ─────────────────────────────────────────────────────
+//  PROFILE & COMMENTS
+// ─────────────────────────────────────────────────────
+function buildProfile(){const g=document.getElementById('prof-grid');for(let i=0;i<12;i++){const d=document.createElement('div');d.className='prof-post';d.style.backgroundImage=`url('https://picsum.photos/seed/pp${i+10}/300/300')`;d.innerHTML=`<div class="post-ov"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" width="22" height="22"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>`;g.appendChild(d);}}
+const COMMENTS=[
+  {user:'Sipho_B',text:'Bro this is too fire 🔥🔥',time:'2m ago',img:'https://picsum.photos/seed/cm1/100/100'},
+  {user:'Lerato_D',text:'Eish wena, you always coming through!',time:'5m ago',img:'https://picsum.photos/seed/cm2/100/100'},
+  {user:'NomvulaTV',text:'From Meyerton with love 💛 keep going!',time:'12m ago',img:'https://picsum.photos/seed/cm3/100/100'},
+  {user:'VaalKid',text:'Yasss rep!! The Vaal is the place 🙌🏾',time:'18m ago',img:'https://picsum.photos/seed/cm4/100/100'},
+];
+function buildComments(){const l=document.getElementById('comments-list');COMMENTS.forEach(c=>{const d=document.createElement('div');d.className='comment-item';d.innerHTML=`<div class="cav" style="background-image:url('${c.img}')"></div><div><div class="cuser">${c.user}</div><div class="ctext">${c.text}</div><div class="ctime">${c.time}</div></div>`;l.appendChild(d);});}
+
+// ─────────────────────────────────────────────────────
+//  ADMIN REPORTS
+// ─────────────────────────────────────────────────────
+const REPORTS=[
+  {type:'violence',label:'Violence',desc:'Video showing a fight outside a store in Vereeniging. 7 reports received.'},
+  {type:'spam',label:'Spam',desc:'User reposting same listing 12 times in Kasi Sell. 5 community reports.'},
+  {type:'explicit',label:'AI Flagged',desc:'Thumbnail flagged by AI moderation (85% nudity confidence). 3 reports.'},
+];
+function buildReports(){const l=document.getElementById('reports-list');REPORTS.forEach(r=>{const d=document.createElement('div');d.className='report-item';d.innerHTML=`<div><span class="rbadge ${r.type}">${r.label}</span></div><div class="rdesc">${r.desc}</div><div class="rbtns"><button class="rbtn del" onclick="showToast('Content removed');this.closest('.report-item').remove()">Remove</button><button class="rbtn ban" onclick="showToast('User banned');this.closest('.report-item').remove()">Ban User</button><button class="rbtn dim" onclick="showToast('Dismissed');this.closest('.report-item').remove()">Dismiss</button></div>`;l.appendChild(d);});}
+
+// ─────────────────────────────────────────────────────
+//  NAVIGATION
+// ─────────────────────────────────────────────────────
+function navTo(page){
+  document.querySelectorAll('.page,.page-fill').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const isAdmin=page==='admin';
+  document.getElementById('bottom-nav').style.display=isAdmin?'none':'flex';
+  document.getElementById('feed-topbar').style.display=page==='feed'?'flex':'none';
+  document.getElementById('cf-status-bar').style.display=page==='feed'?'flex':'none';
+  document.getElementById('sell-fab').classList.toggle('show',page==='market');
+  const pg=document.getElementById('page-'+page);if(pg)pg.classList.add('active');
+  const nv=document.getElementById('nav-'+page);if(nv)nv.classList.add('active');
+}
+
+// ─────────────────────────────────────────────────────
+//  MODALS & TOAST
+// ─────────────────────────────────────────────────────
+function openModal(id){document.getElementById(id).classList.remove('hidden')}
+function closeModal(id){document.getElementById(id).classList.add('hidden')}
+let tt;
+function showToast(msg,err){
+  const t=document.getElementById('toast'),m=document.getElementById('tmsg'),d=document.getElementById('tdot');
+  m.textContent=msg;d.className='tdot'+(err?' err':'');
+  t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ─────────────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────────────
+buildFeed();
+buildDiscover();
+buildMarket();
+buildKasies();
+buildProfile();
+buildReports();
+buildComments();
+navTo('feed');
+
+// Restore CF config from localStorage
+if (state.cf.workerUrl) {
+  testCFConnection(true);
+}
+</script>
+</body>
+</html>
