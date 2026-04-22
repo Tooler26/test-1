@@ -19,6 +19,8 @@
   },
   "homepage": "https://github.com/Tooler26/test-1#readme",
   "dependencies": {
+    "@mux/mux-node": "^14.0.1",
+    "@mux/mux-player-react": "^3.11.8",
     "@vercel/speed-insights": "^2.0.0"
   }
 }
