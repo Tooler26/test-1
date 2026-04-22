@@ -2,505 +2,722 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-<title>Vaal Talk</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
-<!-- Cloudflare Stream Player SDK -->
-<script src="https://embed.cloudflarestream.com/embed/sdk.latest.js" defer></script>
-<!-- TUS resumable upload client -->
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#0A0A0F"/>
+<meta name="description" content="Vaal-Talk Beta — Hyper-local social platform for the Vaal Region"/>
+<title>Vaal-Talk Beta</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://unpkg.com/tus-js-client@latest/dist/tus.min.js"></script>
 <style>
+/* ═══ RESET & TOKENS ═══ */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
-  --gold:#F5A623;--gold2:#FFD166;--pink:#FF4081;--green:#00C853;--blue:#2979FF;
-  --bg:#0A0A0A;--surface:#141414;--surface2:#1E1E1E;--surface3:#252525;
-  --border:#2A2A2A;--text:#F0F0F0;--muted:#888;--red:#FF3B30;
+  /* Brand */
+  --brand:#00E5FF;--brand2:#7B2FFF;--brand3:#FF2D78;
+  --brand-grad:linear-gradient(135deg,#00E5FF,#7B2FFF);
+  --brand-grad2:linear-gradient(135deg,#7B2FFF,#FF2D78);
+  /* Surfaces */
+  --bg:#0A0A0F;--surface:#13131A;--surface2:#1C1C26;--surface3:#252535;
+  --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.14);
+  /* Text */
+  --text:#F2F2F8;--muted:#6B6B8A;--muted2:#9090B0;
+  /* Semantic */
+  --green:#00E676;--red:#FF3B5C;--gold:#FFD60A;--orange:#FF6B2B;
+  /* Job colors */
+  --job:#FF6B2B;--job2:#FFB347;
 }
-html,body{background:var(--bg);color:var(--text);font-family:'Nunito',sans-serif;height:100%;overflow:hidden}
+html,body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;height:100%;overflow:hidden}
 .app{display:flex;flex-direction:column;height:100vh;max-width:430px;margin:0 auto;position:relative;background:var(--bg)}
-/* NAV */
-.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(10,10,10,.97);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;z-index:100;padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px))}
-.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:6px 0 4px;gap:3px;cursor:pointer}
-.nav-item svg{width:22px;height:22px;stroke:var(--muted);transition:stroke .15s}
-.nav-item span{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.4px}
-.nav-item.active svg{stroke:var(--gold)}
-.nav-item.active span{color:var(--gold)}
-.nav-upload{flex:1;display:flex;flex-direction:column;align-items:center;padding:0;cursor:pointer;gap:3px}
-.nav-upload-btn{width:48px;height:34px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-top:-8px;box-shadow:0 4px 16px rgba(245,166,35,.45)}
-.nav-upload-btn svg{stroke:#000;width:22px;height:22px}
-.nav-upload span{font-size:10px;font-weight:700;color:var(--muted)}
-/* PAGES */
-.page{display:none;flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:72px}
+
+/* ═══ SCROLLBAR HIDE ═══ */
+*::-webkit-scrollbar{display:none}
+*{scrollbar-width:none}
+
+/* ═══ ENGAGEMENT BAR ═══ */
+.engage-bar{
+  position:fixed;top:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;z-index:200;
+  background:linear-gradient(90deg,rgba(0,229,255,.12),rgba(123,47,255,.12));
+  border-bottom:1px solid rgba(0,229,255,.2);
+  padding:6px 14px;display:flex;align-items:center;gap:8px;
+  font-size:10px;font-weight:700;color:var(--text);
+}
+.engage-bar-text{flex:1;font-size:10px;color:rgba(255,255,255,.8);line-height:1.3}
+.engage-votes{display:flex;gap:5px}
+.evote-btn{display:flex;align-items:center;gap:3px;padding:4px 9px;border-radius:20px;border:none;font-family:'Space Grotesk';font-weight:700;font-size:10px;cursor:pointer;transition:all .2s}
+.evote-btn.yes{background:rgba(0,230,118,.15);color:var(--green);border:1px solid rgba(0,230,118,.3)}
+.evote-btn.no{background:rgba(255,59,92,.12);color:var(--red);border:1px solid rgba(255,59,92,.25)}
+.evote-btn.voted{opacity:.5;cursor:default}
+.evote-btn svg{width:10px;height:10px}
+
+/* ═══ BOTTOM NAV ═══ */
+.bottom-nav{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;
+  background:rgba(13,13,20,.97);backdrop-filter:blur(24px);
+  border-top:1px solid var(--border);
+  display:flex;z-index:100;
+  padding:5px 0 calc(5px + env(safe-area-inset-bottom,0px))
+}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:5px 0 3px;gap:2px;cursor:pointer;position:relative}
+.nav-item svg{width:21px;height:21px;stroke:var(--muted);transition:all .2s}
+.nav-item span{font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.3px;transition:all .2s}
+.nav-item.active svg{stroke:var(--brand)}
+.nav-item.active span{color:var(--brand)}
+.nav-item.jobs-nav.active svg{stroke:var(--job)}
+.nav-item.jobs-nav.active span{color:var(--job)}
+.nav-notif{position:absolute;top:4px;right:8px;width:7px;height:7px;background:var(--red);border-radius:50%;border:1.5px solid var(--bg)}
+.nav-upload{flex:1;display:flex;flex-direction:column;align-items:center;cursor:pointer;gap:2px}
+.nav-upload-ring{width:46px;height:34px;border-radius:10px;background:var(--brand-grad);display:flex;align-items:center;justify-content:center;margin-top:-7px;box-shadow:0 4px 20px rgba(0,229,255,.35),0 0 0 2px rgba(0,229,255,.15)}
+.nav-upload-ring svg{stroke:#000;width:20px;height:20px}
+.nav-upload span{font-size:9px;font-weight:700;color:var(--muted)}
+
+/* ═══ PAGES ═══ */
+.page{display:none;flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:68px;padding-top:32px}
 .page.active{display:block}
-.page-fill{display:none;flex-direction:column;overflow:hidden}
+.page-fill{display:none;flex-direction:column;overflow:hidden;padding-top:32px}
 .page-fill.active{display:flex}
-/* TOPBAR */
-.topbar{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:50;padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to bottom,rgba(10,10,10,.95) 60%,transparent)}
-.logo{font-family:'Bebas Neue';font-size:26px;letter-spacing:1px;color:var(--gold)}
-.logo span{color:#fff}
-.topbar-tabs{display:flex;gap:18px}
-.topbar-tab{font-size:14px;font-weight:700;color:var(--muted);cursor:pointer;padding:4px 0;border-bottom:2px solid transparent}
-.topbar-tab.active{color:#fff;border-bottom-color:var(--gold)}
-.ticon{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;cursor:pointer}
-.ticon svg{width:18px;height:18px;stroke:#fff}
 
-/* ── VIDEO FEED ── */
-.feed-wrap{height:calc(100vh - 58px);overflow-y:scroll;scroll-snap-type:y mandatory}
-.feed-wrap::-webkit-scrollbar{display:none}
-.video-card{height:calc(100vh - 58px);scroll-snap-align:start;position:relative;display:flex;align-items:flex-end;overflow:hidden;background:#000}
+/* ═══ TOPBAR ═══ */
+.topbar{
+  position:fixed;top:32px;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;z-index:50;
+  padding:10px 14px 8px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(to bottom,rgba(10,10,15,.97) 60%,transparent)
+}
+/* VAAL-TALK LOGO */
+.vt-logo{display:flex;align-items:center;gap:7px;cursor:pointer}
+.vt-logo-icon{width:30px;height:30px;position:relative;flex-shrink:0}
+.vt-logo-icon svg{width:30px;height:30px}
+.vt-logo-text{font-family:'Bebas Neue';font-size:18px;letter-spacing:1.5px;line-height:1}
+.vt-logo-text .vt{background:var(--brand-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.vt-logo-text .beta{font-size:9px;font-family:'Space Grotesk';font-weight:700;color:var(--brand3);letter-spacing:.5px;display:block;margin-top:-3px;-webkit-text-fill-color:var(--brand3)}
+.topbar-tabs{display:flex;gap:14px}
+.topbar-tab{font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;padding:3px 0;border-bottom:2px solid transparent;transition:all .15s}
+.topbar-tab.active{color:var(--text);border-bottom-color:var(--brand)}
+.ticon{width:30px;height:30px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid var(--border)}
+.ticon svg{width:16px;height:16px;stroke:var(--text)}
 
-/* CF Stream player fills the card */
-.stream-player{position:absolute;inset:0;width:100%;height:100%;border:none;background:#000}
-/* `stream` element from CF SDK */
-stream.stream-player{display:block}
-
-/* Placeholder when no video UID configured */
-.video-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--surface2)}
-.video-placeholder-bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.35)}
-.video-placeholder-content{position:relative;z-index:1;text-align:center}
-.video-placeholder-content svg{width:52px;height:52px;stroke:var(--gold);margin-bottom:10px}
-.video-placeholder-content p{font-weight:800;font-size:14px;margin-bottom:4px}
-.video-placeholder-content small{font-size:11px;color:var(--muted)}
-.cf-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(245,166,35,.15);border:1px solid rgba(245,166,35,.3);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--gold);margin-top:8px;cursor:pointer}
-
-.vov{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.88) 0%,rgba(0,0,0,.1) 55%,transparent 100%);pointer-events:none;z-index:1}
-.vinfo{position:relative;z-index:2;padding:0 14px 18px;flex:1;min-width:0}
-.vuser{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
-.vavatar{width:34px;height:34px;border-radius:50%;border:2px solid var(--gold);background:var(--surface3);background-size:cover;flex-shrink:0}
-.vname{font-weight:800;font-size:14px}
-.vloc{font-size:11px;color:rgba(255,255,255,.55)}
-.fchip{background:var(--gold);color:#000;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;cursor:pointer}
-.vdesc{font-size:13px;color:rgba(255,255,255,.88);line-height:1.5;margin-bottom:6px}
-.vtags span{color:var(--gold2);font-size:12px;font-weight:700;margin-right:6px}
-.vactions{position:absolute;right:10px;bottom:75px;z-index:2;display:flex;flex-direction:column;align-items:center;gap:16px}
-.abtn{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
-.abtn svg{width:26px;height:26px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
-.abtn span{font-size:10px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.9)}
-.abtn.liked svg{stroke:var(--red)!important;fill:var(--red)}
-/* CF status ribbon */
-.cf-status-bar{position:absolute;top:54px;left:0;right:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:6px;pointer-events:none}
-.cf-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:700}
-.cf-dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
-.cf-dot.demo{background:var(--gold)}
-
-/* ── GENERIC PAGES ── */
-.pg-header{padding:54px 16px 14px;display:flex;align-items:center;justify-content:space-between}
-.pg-title{font-family:'Bebas Neue';font-size:26px;letter-spacing:1px;color:var(--gold)}
-.pg-sub{font-size:12px;color:var(--muted);margin-top:1px}
-.sbar{margin:0 16px 14px;background:var(--surface2);border-radius:12px;display:flex;align-items:center;padding:11px 14px;gap:9px;border:1px solid var(--border)}
-.sbar input{background:none;border:none;color:var(--text);font-family:'Nunito';font-size:14px;flex:1;outline:none}
+/* ═══ PAGE HEADER ═══ */
+.pg-hd{padding:52px 14px 12px;display:flex;align-items:center;justify-content:space-between}
+.pg-title{font-family:'Bebas Neue';font-size:24px;letter-spacing:1px}
+.pg-title .accent{background:var(--brand-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.pg-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.sec-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 7px}
+.sec-title{font-family:'Bebas Neue';font-size:18px;color:var(--text)}
+.see-all{font-size:11px;color:var(--brand);font-weight:700;cursor:pointer}
+.sbar{margin:0 14px 12px;background:var(--surface2);border-radius:12px;display:flex;align-items:center;padding:10px 12px;gap:8px;border:1px solid var(--border)}
+.sbar input{background:none;border:none;color:var(--text);font-family:'Space Grotesk';font-size:13px;flex:1;outline:none}
 .sbar input::placeholder{color:var(--muted)}
-.sbar svg{width:17px;height:17px;stroke:var(--muted)}
-.sec-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px}
-.sec-title{font-family:'Bebas Neue';font-size:20px;color:var(--gold)}
-.see-all{font-size:12px;color:var(--gold);font-weight:700;cursor:pointer}
+.sbar svg{width:16px;height:16px;stroke:var(--muted)}
 
-/* ── DISCOVER ── */
-.trend-item{background:var(--surface2);border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:12px;border:1px solid var(--border);margin:0 16px 8px;cursor:pointer}
-.trend-rank{font-family:'Bebas Neue';font-size:26px;color:var(--border);min-width:26px}
-.trend-rank.top{color:var(--gold)}
-.trend-tag{font-weight:800;font-size:13px}
-.trend-count{font-size:11px;color:var(--muted)}
-.trend-thumb{width:50px;height:50px;border-radius:8px;background-size:cover;flex-shrink:0}
-.creator-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px}
+/* ═══ FEED ═══ */
+.feed-wrap{height:calc(100vh - 32px - 56px);overflow-y:scroll;scroll-snap-type:y mandatory}
+.video-card{height:calc(100vh - 32px - 56px);scroll-snap-align:start;position:relative;display:flex;align-items:flex-end;overflow:hidden;background:#000}
+.vplaceholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:var(--surface)}
+.vpbg{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.28)}
+.vpbody{position:relative;z-index:1;text-align:center;padding:20px}
+.vpbody svg{width:46px;height:46px;margin-bottom:8px}
+.vpbody p{font-weight:800;font-size:13px;margin-bottom:3px}
+.vpbody small{font-size:10px;color:var(--muted)}
+.vpbody .setup-chip{display:inline-flex;align-items:center;gap:4px;background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.25);border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700;color:var(--brand);margin-top:8px;cursor:pointer}
+.vov{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.92) 0%,rgba(0,0,0,.08) 55%,transparent 100%);pointer-events:none;z-index:1}
+.vinfo{position:relative;z-index:2;padding:0 12px 14px;flex:1;min-width:0}
+.vuser{display:flex;align-items:center;gap:7px;margin-bottom:7px;flex-wrap:wrap}
+.vavatar{width:32px;height:32px;border-radius:50%;border:2px solid var(--brand);background-size:cover;flex-shrink:0;background-position:center}
+.vname{font-weight:800;font-size:13px}
+.vloc{font-size:10px;color:rgba(255,255,255,.5)}
+.fchip{background:var(--brand-grad);color:#000;font-size:9px;font-weight:800;padding:2px 8px;border-radius:20px;cursor:pointer}
+.vdesc{font-size:12px;color:rgba(255,255,255,.85);line-height:1.5;margin-bottom:6px}
+.vtags span{color:var(--brand);font-size:11px;font-weight:700;margin-right:5px}
+.vactions{position:absolute;right:9px;bottom:66px;z-index:2;display:flex;flex-direction:column;align-items:center;gap:14px}
+.abtn{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+.abtn svg{width:24px;height:24px;filter:drop-shadow(0 1px 4px rgba(0,0,0,.7))}
+.abtn span{font-size:9px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.abtn.liked svg{stroke:var(--red);fill:var(--red)}
+
+/* ═══ JOBS (KASI QUICK JOBS) ═══ */
+.jobs-hero{margin:52px 14px 14px;background:linear-gradient(135deg,rgba(255,107,43,.15),rgba(255,179,71,.08));border:1px solid rgba(255,107,43,.3);border-radius:16px;padding:18px;position:relative;overflow:hidden}
+.jobs-hero::before{content:'';position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(255,107,43,.2),transparent 70%)}
+.jobs-hero-label{font-size:9px;font-weight:800;color:var(--job2);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px}
+.jobs-hero-title{font-family:'Bebas Neue';font-size:26px;line-height:1;margin-bottom:5px}
+.jobs-hero-title .jhl{background:linear-gradient(135deg,var(--job),var(--job2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.jobs-hero-sub{font-size:11px;color:var(--muted2);margin-bottom:12px}
+.post-job-btn{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,var(--job),var(--job2));color:#000;border:none;border-radius:10px;padding:9px 16px;font-family:'Space Grotesk';font-weight:800;font-size:12px;cursor:pointer}
+.post-job-btn svg{width:14px;height:14px;stroke:#000}
+/* Job category pills */
+.job-cats{display:flex;gap:7px;overflow-x:auto;padding:0 14px 4px;margin-bottom:4px}
+.job-cat{flex-shrink:0;padding:6px 13px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border);color:var(--muted2);background:var(--surface2);transition:all .2s}
+.job-cat.active{background:linear-gradient(135deg,var(--job),var(--job2));color:#000;border-color:transparent}
+/* Job cards */
+.jobs-list{padding:0 14px;display:flex;flex-direction:column;gap:10px}
+.job-card{background:var(--surface2);border-radius:14px;border:1px solid var(--border);overflow:hidden;cursor:pointer;transition:transform .15s}
+.job-card:active{transform:scale(.98)}
+.job-card-top{padding:13px 13px 10px;display:flex;gap:11px;align-items:flex-start}
+.job-avatar{width:42px;height:42px;border-radius:10px;background:var(--surface3);background-size:cover;background-position:center;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue';font-size:16px;color:var(--job2)}
+.job-info{flex:1;min-width:0}
+.job-title{font-weight:800;font-size:13px;margin-bottom:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.job-company{font-size:11px;color:var(--muted2);margin-bottom:4px}
+.job-tags{display:flex;gap:5px;flex-wrap:wrap}
+.job-tag{font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;background:rgba(255,107,43,.12);color:var(--job2);border:1px solid rgba(255,107,43,.2)}
+.job-tag.remote{background:rgba(0,230,118,.1);color:var(--green);border-color:rgba(0,230,118,.2)}
+.job-tag.urgent{background:rgba(255,59,92,.1);color:var(--red);border-color:rgba(255,59,92,.2)}
+.job-card-footer{padding:8px 13px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.job-pay{font-family:'Bebas Neue';font-size:17px;color:var(--green)}
+.job-loc{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:3px}
+.job-loc svg{width:10px;height:10px;stroke:var(--muted)}
+.job-apply-btn{background:var(--job);color:#000;border:none;border-radius:7px;padding:5px 12px;font-family:'Space Grotesk';font-weight:800;font-size:10px;cursor:pointer}
+.job-card.featured{border-color:rgba(255,107,43,.4)}
+.job-card.featured .job-card-top{background:linear-gradient(135deg,rgba(255,107,43,.06),rgba(255,179,71,.04))}
+
+/* Post job modal extras */
+.job-types{display:flex;gap:7px;margin-bottom:11px;flex-wrap:wrap}
+.jtype-btn{padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface3);color:var(--muted2);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s}
+.jtype-btn.active{background:linear-gradient(135deg,var(--job),var(--job2));color:#000;border-color:transparent}
+
+/* ═══ DISCOVER / TRENDING ═══ */
+.trend-item{background:var(--surface2);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:11px;border:1px solid var(--border);margin:0 14px 8px;cursor:pointer}
+.trend-rank{font-family:'Bebas Neue';font-size:24px;color:var(--border2);min-width:24px}
+.trend-rank.top{background:var(--brand-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.trend-tag{font-weight:800;font-size:12px}
+.trend-count{font-size:10px;color:var(--muted)}
+.trend-thumb{width:46px;height:46px;border-radius:8px;background-size:cover;flex-shrink:0}
+.creator-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px}
 .creator-card{background:var(--surface2);border-radius:14px;overflow:hidden;border:1px solid var(--border);cursor:pointer}
-.creator-banner{height:66px;background-size:cover;background-position:center}
-.creator-body{padding:10px;text-align:center;margin-top:-20px}
-.creator-av{width:44px;height:44px;border-radius:50%;background:var(--surface3);border:3px solid var(--surface2);margin:0 auto 5px;background-size:cover}
-.creator-name{font-weight:800;font-size:12px}
-.creator-stats{font-size:10px;color:var(--muted);margin:2px 0 7px}
-.follow-btn{width:100%;background:var(--gold);color:#000;border:none;border-radius:7px;padding:6px;font-family:'Nunito';font-weight:800;font-size:11px;cursor:pointer}
+.creator-banner{height:64px;background-size:cover;background-position:center}
+.creator-body{padding:9px;text-align:center;margin-top:-18px}
+.creator-av{width:40px;height:40px;border-radius:50%;background:var(--surface3);border:2px solid var(--surface2);margin:0 auto 4px;background-size:cover}
+.creator-name{font-weight:800;font-size:11px}
+.creator-stats{font-size:9px;color:var(--muted);margin:2px 0 6px}
+.follow-btn{width:100%;background:var(--brand-grad);color:#000;border:none;border-radius:7px;padding:6px;font-family:'Space Grotesk';font-weight:800;font-size:10px;cursor:pointer}
 .follow-btn.following{background:var(--surface3);color:var(--muted);border:1px solid var(--border)}
 
-/* ── MARKETPLACE ── */
-.mkt-tab-bar{display:flex;margin:0 16px 16px;background:var(--surface2);border-radius:12px;padding:4px;border:1px solid var(--border)}
-.mkt-tab{flex:1;padding:10px;text-align:center;font-weight:800;font-size:13px;color:var(--muted);cursor:pointer;border-radius:9px;transition:all .2s}
-.mkt-tab.active{background:var(--gold);color:#000}
-.mkt-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px}
-.mkt-card{background:var(--surface2);border-radius:14px;overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:transform .15s}
+/* ═══ MARKETPLACE ═══ */
+.mkt-tab-bar{display:flex;margin:0 14px 14px;background:var(--surface2);border-radius:12px;padding:4px;border:1px solid var(--border)}
+.mkt-tab{flex:1;padding:9px;text-align:center;font-weight:800;font-size:11px;color:var(--muted);cursor:pointer;border-radius:9px;transition:all .2s}
+.mkt-tab.active{background:var(--brand-grad);color:#000}
+.mkt-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:0 14px}
+.mkt-card{background:var(--surface2);border-radius:13px;overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:transform .15s}
 .mkt-card:active{transform:scale(.97)}
-.mkt-img{height:135px;background-size:cover;background-position:center;position:relative}
-.mkt-badge{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);border-radius:6px;padding:3px 7px;font-size:10px;font-weight:800}
-.mkt-badge.hot{color:var(--pink)}
+.mkt-img{height:128px;background-size:cover;background-position:center;position:relative}
+.mkt-badge{position:absolute;top:7px;left:7px;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);border-radius:5px;padding:2px 6px;font-size:9px;font-weight:800}
+.mkt-badge.hot{color:var(--brand3)}
 .mkt-badge.new{color:var(--green)}
-.mkt-body{padding:10px}
-.mkt-title{font-weight:700;font-size:13px;margin-bottom:3px}
-.mkt-price{font-family:'Bebas Neue';font-size:21px;color:var(--gold)}
-.mkt-seller{font-size:11px;color:var(--muted);margin-top:3px}
-.mall-header-banner{margin:0 16px 16px;background:var(--surface2);border-radius:14px;padding:16px;border:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
-.mall-header-text strong{font-size:14px;display:block;margin-bottom:3px}
-.mall-header-text small{font-size:11px;color:var(--muted)}
-.register-btn{background:var(--gold);color:#000;border:none;border-radius:9px;padding:9px 14px;font-family:'Nunito';font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap}
-.mall-card{background:var(--surface2);border-radius:14px;padding:14px;border:1px solid var(--border);display:flex;align-items:center;gap:12px;margin:0 16px 10px;cursor:pointer}
-.mall-logo{width:54px;height:54px;border-radius:12px;flex-shrink:0;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue';font-size:18px;color:var(--gold);border:1px solid var(--border)}
+.mkt-body{padding:9px}
+.mkt-title{font-weight:700;font-size:12px;margin-bottom:2px}
+.mkt-price{font-family:'Bebas Neue';font-size:19px;background:var(--brand-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.mkt-seller{font-size:10px;color:var(--muted);margin-top:2px}
+.mall-header-banner{margin:0 14px 13px;background:linear-gradient(135deg,rgba(0,229,255,.08),rgba(123,47,255,.08));border-radius:14px;padding:14px;border:1px solid rgba(0,229,255,.15);display:flex;align-items:center;justify-content:space-between;gap:11px}
+.mall-header-text strong{font-size:13px;display:block;margin-bottom:2px}
+.mall-header-text small{font-size:10px;color:var(--muted)}
+.register-btn{background:var(--brand-grad);color:#000;border:none;border-radius:8px;padding:8px 12px;font-family:'Space Grotesk';font-weight:800;font-size:11px;cursor:pointer;white-space:nowrap}
+.mall-card{background:var(--surface2);border-radius:13px;padding:12px;border:1px solid var(--border);display:flex;align-items:center;gap:11px;margin:0 14px 9px;cursor:pointer}
+.mall-logo{width:48px;height:48px;border-radius:10px;flex-shrink:0;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue';font-size:16px;color:var(--brand);border:1px solid var(--border)}
 .mall-info{flex:1;min-width:0}
-.mall-name{font-weight:800;font-size:14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.gbadge{background:var(--gold);color:#000;font-size:9px;font-weight:800;padding:2px 5px;border-radius:4px}
-.mall-cat{font-size:11px;color:var(--muted);margin:2px 0 4px}
-.mall-rating{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700}
-.mall-rating svg{width:12px;height:12px;fill:var(--gold)}
-.sell-fab{position:fixed;bottom:78px;right:max(16px,calc(50% - 199px));width:50px;height:50px;background:var(--gold);border-radius:14px;display:none;align-items:center;justify-content:center;z-index:90;cursor:pointer;box-shadow:0 4px 18px rgba(245,166,35,.5)}
+.mall-name{font-weight:800;font-size:13px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.gbadge{background:var(--brand-grad);color:#000;font-size:8px;font-weight:800;padding:2px 4px;border-radius:3px}
+.mall-cat{font-size:10px;color:var(--muted);margin:2px 0 3px}
+.mall-rating{display:flex;align-items:center;gap:3px;font-size:11px;font-weight:700}
+.mall-rating svg{width:10px;height:10px;fill:var(--gold)}
+.sell-fab{position:fixed;bottom:72px;right:max(12px,calc(50% - 203px));width:46px;height:46px;background:var(--brand-grad);border-radius:13px;display:none;align-items:center;justify-content:center;z-index:90;cursor:pointer;box-shadow:0 4px 20px rgba(0,229,255,.4)}
 .sell-fab.show{display:flex}
-.sell-fab svg{stroke:#000;width:24px;height:24px}
+.sell-fab svg{stroke:#000;width:22px;height:22px}
 
-/* ── COMMUNITIES ── */
-.kasie-hero{margin:54px 16px 14px;padding:18px;background:var(--surface2);border-radius:16px;border:1px solid var(--border)}
-.kasie-hero-title{font-family:'Bebas Neue';font-size:30px;color:var(--gold);line-height:1}
-.kasie-hero-sub{font-size:12px;color:var(--muted);margin-top:3px}
-.live-banner{margin:0 16px 14px;background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.3);border-radius:13px;padding:13px;display:flex;align-items:center;gap:10px;cursor:pointer}
-.live-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(255,59,48,.9);color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:.5px;flex-shrink:0}
-.live-dot{width:7px;height:7px;background:#fff;border-radius:50%;animation:pulse 1s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.kasie-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px;margin-bottom:10px}
-.kasie-card{background:var(--surface2);border-radius:14px;padding:14px;border:1px solid var(--border);cursor:pointer;position:relative;overflow:hidden;transition:transform .15s}
+/* ═══ COMMUNITIES ═══ */
+.kasie-hero{margin:52px 14px 13px;padding:16px;border-radius:15px;background:linear-gradient(135deg,rgba(0,229,255,.08),rgba(123,47,255,.06));border:1px solid rgba(0,229,255,.15);position:relative;overflow:hidden}
+.kasie-hero::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(0,229,255,.03) 0,rgba(0,229,255,.03) 1px,transparent 1px,transparent 8px)}
+.kasie-hero-title{font-family:'Bebas Neue';font-size:28px;background:var(--brand-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
+.kasie-hero-sub{font-size:11px;color:var(--muted2);margin-top:3px}
+.live-banner{margin:0 14px 12px;background:rgba(255,59,92,.1);border:1px solid rgba(255,59,92,.3);border-radius:12px;padding:11px;display:flex;align-items:center;gap:9px;cursor:pointer}
+.live-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(255,59,92,.9);color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px;letter-spacing:.6px;flex-shrink:0}
+.live-dot{width:6px;height:6px;background:#fff;border-radius:50%;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.kasie-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:0 14px;margin-bottom:9px}
+.kasie-card{background:var(--surface2);border-radius:13px;padding:13px;border:1px solid var(--border);cursor:pointer;position:relative;overflow:hidden;transition:all .15s}
 .kasie-card:active{transform:scale(.97)}
-.kasie-card.joined{border-color:rgba(245,166,35,.35)}
-.kasie-card.joined::after{content:'✓ Joined';position:absolute;top:8px;right:8px;font-size:9px;font-weight:800;color:var(--gold)}
-.kasie-name{font-weight:800;font-size:14px;margin-bottom:3px;padding-right:38px}
-.kasie-members{font-size:11px;color:var(--muted)}
-.kasie-prog{height:3px;background:var(--surface3);border-radius:2px;margin:8px 0;overflow:hidden}
-.kasie-progbar{height:100%;background:var(--gold);border-radius:2px}
-.kasie-chat{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:3px 7px;border-radius:20px;margin-top:4px}
-.kasie-chat.on{background:rgba(0,200,83,.12);color:var(--green)}
+.kasie-card.joined{border-color:rgba(0,229,255,.3)}
+.kasie-card.joined::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--brand-grad)}
+.kasie-card.joined::after{content:'✓ Joined';position:absolute;top:9px;right:9px;font-size:8px;font-weight:800;color:var(--brand)}
+.kasie-name{font-weight:800;font-size:13px;margin-bottom:3px;padding-right:38px}
+.kasie-members{font-size:10px;color:var(--muted)}
+.kasie-prog{height:3px;background:var(--surface3);border-radius:2px;margin:7px 0;overflow:hidden}
+.kasie-progbar{height:100%;background:var(--brand-grad);border-radius:2px}
+.kasie-chat{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;margin-top:3px}
+.kasie-chat.on{background:rgba(0,230,118,.1);color:var(--green)}
 .kasie-chat.off{background:rgba(255,255,255,.05);color:var(--muted)}
-.req-community{margin:0 16px 16px;background:var(--surface2);border-radius:14px;padding:16px;border:1px dashed var(--border);text-align:center;cursor:pointer}
+.req-kasie{margin:0 14px 13px;background:var(--surface2);border-radius:13px;padding:14px;border:1px dashed var(--border2);text-align:center;cursor:pointer}
 
-/* ── CHAT ── */
-.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 58px)}
-.chat-hd{padding:50px 14px 12px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
-.chat-back{width:34px;height:34px;border-radius:9px;background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
-.chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
-.chat-msgs::-webkit-scrollbar{display:none}
-.msg-row{display:flex;gap:8px;align-items:flex-end}
+/* ═══ CHAT ═══ */
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 32px - 56px)}
+.chat-hd{padding:46px 13px 11px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}
+.chat-back{width:32px;height:32px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.chat-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:9px}
+.msg-row{display:flex;gap:7px;align-items:flex-end}
 .msg-row.mine{flex-direction:row-reverse}
-.mavatar{width:28px;height:28px;border-radius:50%;background:var(--surface3);flex-shrink:0;background-size:cover}
-.mbubble{max-width:72%;padding:9px 12px;border-radius:16px;background:var(--surface2);font-size:13px;line-height:1.5}
-.msg-row.mine .mbubble{background:var(--gold);color:#000;font-weight:600}
-.mname{font-size:10px;color:var(--muted);margin-bottom:3px;font-weight:700}
-.mtime{font-size:10px;color:var(--muted);margin-top:3px}
-.chat-input-bar{padding:10px 14px;background:var(--surface);border-top:1px solid var(--border);display:flex;gap:9px;align-items:center;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
-.cinput-msg{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:22px;padding:9px 14px;color:var(--text);font-family:'Nunito';font-size:13px;outline:none}
-.csend{width:40px;height:40px;background:var(--gold);border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.csend svg{width:17px;height:17px;stroke:#000}
+.mavatar{width:26px;height:26px;border-radius:50%;background:var(--surface3);flex-shrink:0;background-size:cover}
+.mbubble{max-width:72%;padding:8px 11px;border-radius:15px;background:var(--surface2);font-size:12px;line-height:1.5}
+.msg-row.mine .mbubble{background:var(--brand-grad);color:#000;font-weight:600}
+.mname{font-size:9px;color:var(--muted);margin-bottom:2px;font-weight:700}
+.mtime{font-size:9px;color:var(--muted);margin-top:2px}
+.chat-input-bar{padding:8px 12px;background:var(--surface);border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))}
+.cinput-msg{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:8px 12px;color:var(--text);font-family:'Space Grotesk';font-size:12px;outline:none}
+.cinput-msg:focus{border-color:var(--brand)}
+.csend{width:36px;height:36px;background:var(--brand-grad);border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.csend svg{width:15px;height:15px;stroke:#000}
 
-/* ── PROFILE ── */
-.profile-cover{height:170px;background-size:cover;background-position:center;position:relative}
-.prof-ov{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.25),rgba(10,10,10,.96))}
-.prof-av-wrap{position:absolute;bottom:-38px;left:50%;transform:translateX(-50%)}
-.prof-av{width:80px;height:80px;border-radius:50%;border:3px solid var(--gold);background-size:cover;background-position:center}
-.prof-verified{position:absolute;bottom:0;right:0;width:22px;height:22px;background:var(--gold);border-radius:50%;border:2px solid var(--bg);display:flex;align-items:center;justify-content:center}
-.prof-verified svg{width:11px;height:11px;stroke:#000}
-.prof-hd{text-align:center;margin-top:48px;padding:0 20px}
-.prof-name{font-family:'Bebas Neue';font-size:24px;letter-spacing:1px}
-.prof-handle{font-size:12px;color:var(--muted);margin-bottom:8px}
-.prof-bio{font-size:13px;color:rgba(255,255,255,.7);line-height:1.5;margin-bottom:12px}
-.prof-stats{display:flex;justify-content:center;gap:28px;margin-bottom:14px}
+/* ═══ PROFILE ═══ */
+.profile-cover{height:155px;background-size:cover;background-position:center;position:relative}
+.prof-ov{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.2),rgba(10,10,15,.97))}
+.prof-av-wrap{position:absolute;bottom:-34px;left:50%;transform:translateX(-50%)}
+.prof-av{width:72px;height:72px;border-radius:50%;border:3px solid var(--brand);background-size:cover;background-position:center}
+.prof-verified{position:absolute;bottom:0;right:0;width:20px;height:20px;background:var(--brand-grad);border-radius:50%;border:2px solid var(--bg);display:flex;align-items:center;justify-content:center}
+.prof-verified svg{width:10px;height:10px;stroke:#000}
+.prof-hd{text-align:center;margin-top:42px;padding:0 16px}
+.prof-name{font-family:'Bebas Neue';font-size:22px;letter-spacing:1px}
+.prof-handle{font-size:11px;color:var(--muted);margin-bottom:7px}
+.prof-bio{font-size:12px;color:rgba(255,255,255,.7);line-height:1.5;margin-bottom:11px}
+.prof-stats{display:flex;justify-content:center;gap:22px;margin-bottom:12px}
 .stat-box{text-align:center}
-.snum{font-family:'Bebas Neue';font-size:22px;color:var(--gold)}
-.slabel{font-size:10px;color:var(--muted)}
-.prof-btns{display:flex;gap:8px;padding:0 16px;margin-bottom:16px}
-.edit-btn{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:10px;font-family:'Nunito';font-weight:700;font-size:13px;cursor:pointer}
-.share-btn{width:40px;height:40px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer}
-.share-btn svg{width:17px;height:17px;stroke:var(--text)}
-.prem-badge{margin:0 16px 16px;background:rgba(245,166,35,.07);border:1px solid rgba(245,166,35,.25);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px}
-.prem-badge svg{width:18px;height:18px;stroke:var(--gold);flex-shrink:0}
-.prem-badge strong{font-size:13px;display:block}
-.prem-badge small{font-size:11px;color:var(--muted)}
+.snum{font-family:'Bebas Neue';font-size:21px;background:var(--brand-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.slabel{font-size:9px;color:var(--muted)}
+.prof-btns{display:flex;gap:7px;padding:0 14px;margin-bottom:13px}
+.edit-btn{flex:1;background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:9px;border-radius:9px;font-family:'Space Grotesk';font-weight:700;font-size:12px;cursor:pointer;transition:all .2s}
+.edit-btn:hover{border-color:var(--brand)}
+.share-btn{width:36px;height:36px;background:var(--surface2);border:1px solid var(--border2);border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.share-btn svg{width:16px;height:16px;stroke:var(--text)}
+.prem-badge{margin:0 14px 13px;background:linear-gradient(135deg,rgba(0,229,255,.08),rgba(123,47,255,.06));border:1px solid rgba(0,229,255,.2);border-radius:11px;padding:11px 12px;display:flex;align-items:center;gap:9px}
+.prem-badge svg{width:16px;height:16px;flex-shrink:0}
+.prem-badge strong{font-size:12px;display:block}
+.prem-badge small{font-size:10px;color:var(--muted)}
 .prof-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
 .prof-post{aspect-ratio:1;background-size:cover;background-position:center;background-color:var(--surface2);cursor:pointer;position:relative;overflow:hidden}
 .post-ov{position:absolute;inset:0;background:rgba(0,0,0,.5);opacity:0;transition:.2s;display:flex;align-items:center;justify-content:center}
 .prof-post:hover .post-ov{opacity:1}
-.post-ov svg{width:22px;height:22px;stroke:#fff}
-.menu-item{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.post-ov svg{width:20px;height:20px;stroke:#fff}
+.menu-item{display:flex;align-items:center;gap:11px;padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
 .menu-item:active{background:var(--surface2)}
-.menu-item svg{width:19px;height:19px;stroke:var(--gold);flex-shrink:0}
-.menu-item-text{flex:1;font-weight:600;font-size:13px}
-.menu-chevron{font-size:14px;color:var(--muted)}
+.menu-item svg{width:18px;height:18px;flex-shrink:0}
+.menu-item-text{flex:1;font-weight:600;font-size:12px}
+.menu-chevron{font-size:13px;color:var(--muted)}
 
-/* ── ADMIN ── */
-.admin-wrap{padding-bottom:80px}
-.admin-hd{padding:50px 16px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
-.admin-back{width:34px;height:34px;border-radius:9px;background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
-.admin-title{font-family:'Bebas Neue';font-size:26px}
-.admin-title span{color:var(--red)}
-.stat-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px}
-.scard{background:var(--surface2);border-radius:13px;padding:13px;border:1px solid var(--border)}
-.scard-label{font-size:10px;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
-.scard-num{font-family:'Bebas Neue';font-size:30px;line-height:1}
-.scard-change{font-size:11px;margin-top:3px}
-.admin-sec{margin:0 16px 16px}
-.admin-sec-title{font-weight:800;font-size:11px;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px}
-.report-item{background:var(--surface2);border-radius:12px;padding:12px;border:1px solid var(--border);margin-bottom:8px}
-.rbadge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;display:inline-block;margin-bottom:6px}
-.rbadge.violence{background:rgba(255,59,48,.15);color:var(--red)}
-.rbadge.spam{background:rgba(255,64,129,.15);color:var(--pink)}
-.rbadge.explicit{background:rgba(245,166,35,.15);color:var(--gold)}
-.rdesc{font-size:12px;color:var(--muted);margin-bottom:9px;line-height:1.5}
-.rbtns{display:flex;gap:7px}
-.rbtn{flex:1;padding:7px;border-radius:8px;border:none;font-family:'Nunito';font-weight:800;font-size:11px;cursor:pointer}
-.rbtn.del{background:rgba(255,59,48,.12);color:var(--red)}
-.rbtn.dim{background:var(--surface3);color:var(--muted)}
-.rbtn.ban{background:rgba(255,59,48,.18);color:var(--red)}
+/* Social links bar */
+.social-bar{display:flex;align-items:center;justify-content:center;gap:16px;padding:16px 14px;border-top:1px solid var(--border)}
+.social-link{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;border:1px solid var(--border)}
+.social-link:hover{transform:scale(1.08)}
+.social-link.youtube{background:rgba(255,0,0,.12);border-color:rgba(255,0,0,.25)}
+.social-link.twitter{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15)}
+.social-link.facebook{background:rgba(24,119,242,.12);border-color:rgba(24,119,242,.25)}
 
-/* ── CF STREAM SETTINGS CARD ── */
-.cf-settings-card{margin:0 16px 16px;background:var(--surface2);border-radius:14px;border:1px solid rgba(245,166,35,.3);overflow:hidden}
-.cf-settings-header{background:rgba(245,166,35,.08);padding:14px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
-.cf-settings-header svg{width:18px;height:18px;stroke:var(--gold)}
-.cf-settings-header strong{font-size:14px}
-.cf-settings-header small{font-size:11px;color:var(--muted);display:block;margin-top:1px}
-.cf-status-indicator{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700}
-.cf-status-indicator .dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
-.cf-status-indicator .dot.connected{background:var(--green)}
-.cf-settings-body{padding:14px 16px}
-.cf-field{margin-bottom:12px}
-.cf-label{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:block}
-.cf-input{width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:9px;padding:10px 13px;color:var(--text);font-family:'Nunito';font-size:13px;outline:none}
-.cf-input:focus{border-color:var(--gold)}
-.cf-save-btn{width:100%;background:var(--gold);color:#000;border:none;border-radius:9px;padding:11px;font-family:'Nunito';font-weight:800;font-size:13px;cursor:pointer}
-.cf-test-btn{width:100%;background:var(--surface3);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:10px;font-family:'Nunito';font-weight:700;font-size:13px;cursor:pointer;margin-top:8px}
+/* Invite section */
+.invite-card{margin:0 14px 13px;background:linear-gradient(135deg,rgba(123,47,255,.12),rgba(255,45,120,.08));border:1px solid rgba(123,47,255,.25);border-radius:14px;padding:14px}
+.invite-card-title{font-weight:800;font-size:13px;margin-bottom:4px;display:flex;align-items:center;gap:7px}
+.invite-card-title svg{width:16px;height:16px;stroke:var(--brand2)}
+.invite-card-sub{font-size:11px;color:var(--muted2);margin-bottom:11px}
+.invite-platforms{display:flex;gap:9px;flex-wrap:wrap}
+.inv-btn{display:flex;align-items:center;gap:5px;padding:7px 11px;border-radius:9px;border:1px solid var(--border);background:var(--surface3);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s;color:var(--text)}
+.inv-btn:active{transform:scale(.96)}
+.inv-btn svg{width:14px;height:14px}
 
-/* ── MODALS ── */
-.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:200;display:flex;align-items:flex-end;backdrop-filter:blur(6px)}
-.modal-ov.hidden{display:none}
-.modal-sheet{width:100%;max-width:430px;margin:0 auto;background:var(--surface);border-radius:20px 20px 0 0;padding:0 0 calc(env(safe-area-inset-bottom,0px) + 16px);max-height:85vh;overflow-y:auto;animation:su .28s ease}
+/* ═══ AUTH ═══ */
+.auth-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:400;display:flex;align-items:flex-end;backdrop-filter:blur(8px)}
+.auth-modal.hidden{display:none}
+.auth-sheet{width:100%;max-width:430px;margin:0 auto;background:var(--surface);border-radius:20px 20px 0 0;padding:20px 16px calc(env(safe-area-inset-bottom,0px) + 20px);animation:su .28s ease}
 @keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.mhandle{width:34px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 6px}
-.mtitle{font-weight:800;font-size:15px;padding:6px 16px 12px;border-bottom:1px solid var(--border)}
-.comment-item{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:9px}
-.cav{width:32px;height:32px;border-radius:50%;background:var(--surface3);flex-shrink:0;background-size:cover}
-.cuser{font-weight:700;font-size:12px}
-.ctext{font-size:13px;color:rgba(255,255,255,.82);margin:2px 0;line-height:1.5}
-.ctime{font-size:10px;color:var(--muted)}
-.cinput-row{padding:12px 16px;display:flex;gap:9px;align-items:center;border-top:1px solid var(--border)}
-.cfield{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:9px 13px;color:var(--text);font-family:'Nunito';font-size:13px;outline:none}
-.cpost-btn{background:var(--gold);color:#000;border:none;border-radius:20px;padding:8px 14px;font-weight:800;font-size:12px;cursor:pointer}
+.auth-logo-wrap{text-align:center;margin-bottom:16px}
+.auth-tabs{display:flex;background:var(--surface2);border-radius:10px;padding:3px;margin-bottom:14px}
+.auth-tab{flex:1;padding:8px;text-align:center;font-weight:800;font-size:12px;color:var(--muted);cursor:pointer;border-radius:8px;transition:all .2s}
+.auth-tab.active{background:var(--brand-grad);color:#000}
+.auth-label{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px}
+.auth-input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:9px;padding:10px 12px;color:var(--text);font-family:'Space Grotesk';font-size:13px;outline:none;margin-bottom:10px}
+.auth-input:focus{border-color:var(--brand)}
+.auth-btn{width:100%;background:var(--brand-grad);color:#000;border:none;border-radius:10px;padding:12px;font-family:'Space Grotesk';font-weight:800;font-size:14px;cursor:pointer;margin-top:4px;transition:opacity .2s}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed}
+.auth-error{font-size:11px;color:var(--red);text-align:center;margin-top:8px;min-height:14px}
+.auth-skip{display:block;text-align:center;font-size:11px;color:var(--muted);margin-top:12px;cursor:pointer}
 
-/* ── UPLOAD MODAL (CF Stream) ── */
-.upload-body{padding:16px}
-.upload-title{font-family:'Bebas Neue';font-size:22px;color:var(--gold);margin-bottom:14px}
-.dropzone{border:2px dashed var(--border);border-radius:14px;padding:28px 16px;text-align:center;margin-bottom:14px;cursor:pointer;transition:border-color .2s;position:relative;overflow:hidden}
-.dropzone:hover{border-color:var(--gold)}
-.dropzone svg{width:44px;height:44px;stroke:var(--gold);margin-bottom:8px}
-.dropzone p{font-weight:700;font-size:13px;margin-bottom:3px}
-.dropzone small{color:var(--muted);font-size:11px}
-.dropzone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
-
-/* Upload progress */
-.upload-progress{display:none;margin-bottom:14px}
-.upload-progress.show{display:block}
-.progress-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.progress-file{font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px}
-.progress-pct{font-family:'Bebas Neue';font-size:20px;color:var(--gold)}
-.progress-bar-wrap{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-bottom:6px}
-.progress-bar{height:100%;background:var(--gold);border-radius:3px;width:0%;transition:width .3s}
-.progress-status{font-size:11px;color:var(--muted)}
-.progress-status.done{color:var(--green)}
-.progress-status.err{color:var(--red)}
-
-/* Upload stage indicator */
-.upload-stages{display:flex;gap:0;margin-bottom:14px}
-.ustage{flex:1;padding:8px;text-align:center;font-size:10px;font-weight:700;color:var(--muted);border-bottom:2px solid var(--border);transition:all .2s}
-.ustage.active{color:var(--gold);border-bottom-color:var(--gold)}
+/* ═══ SETTINGS / MODALS ═══ */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;display:flex;align-items:flex-end;backdrop-filter:blur(6px)}
+.modal-ov.hidden{display:none}
+.modal-sheet{width:100%;max-width:430px;margin:0 auto;background:var(--surface);border-radius:20px 20px 0 0;padding:0 0 calc(env(safe-area-inset-bottom,0px) + 14px);max-height:88vh;overflow-y:auto;animation:su .28s ease}
+.mhandle{width:32px;height:4px;background:var(--border2);border-radius:2px;margin:11px auto 5px}
+.mtitle{font-weight:800;font-size:14px;padding:5px 14px 11px;border-bottom:1px solid var(--border)}
+.comment-item{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;gap:8px}
+.cav{width:30px;height:30px;border-radius:50%;background:var(--surface3);flex-shrink:0;background-size:cover}
+.cuser{font-weight:700;font-size:11px;color:var(--brand)}
+.ctext{font-size:12px;color:rgba(255,255,255,.82);margin:2px 0;line-height:1.5}
+.ctime{font-size:9px;color:var(--muted)}
+.cinput-row{padding:10px 14px;display:flex;gap:8px;align-items:center;border-top:1px solid var(--border)}
+.cfield{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:8px 12px;color:var(--text);font-family:'Space Grotesk';font-size:12px;outline:none}
+.cfield:focus{border-color:var(--brand)}
+.cpost-btn{background:var(--brand-grad);color:#000;border:none;border-radius:20px;padding:7px 13px;font-weight:800;font-size:11px;cursor:pointer}
+.upload-body{padding:14px}
+.upload-title{font-family:'Bebas Neue';font-size:22px;background:var(--brand-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px}
+.upload-stages{display:flex;margin-bottom:12px}
+.ustage{flex:1;padding:6px;text-align:center;font-size:9px;font-weight:700;color:var(--muted);border-bottom:2px solid var(--border);transition:all .2s}
+.ustage.active{color:var(--brand);border-bottom-color:var(--brand)}
 .ustage.done{color:var(--green);border-bottom-color:var(--green)}
-
-.flabel{font-size:11px;font-weight:800;color:var(--muted);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.5px}
-.finput{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:11px 13px;color:var(--text);font-family:'Nunito';font-size:13px;outline:none;margin-bottom:11px}
-.finput:focus{border-color:var(--gold)}
-.sub-btn{width:100%;background:var(--gold);color:#000;border:none;border-radius:11px;padding:13px;font-family:'Nunito';font-weight:800;font-size:14px;cursor:pointer;margin-top:4px}
+.dropzone{border:2px dashed rgba(0,229,255,.2);border-radius:13px;padding:24px 14px;text-align:center;margin-bottom:12px;cursor:pointer;position:relative;overflow:hidden;transition:border-color .2s}
+.dropzone:hover{border-color:var(--brand)}
+.dropzone svg{width:40px;height:40px;stroke:var(--brand);margin-bottom:7px}
+.dropzone p{font-weight:700;font-size:12px;margin-bottom:2px}
+.dropzone small{color:var(--muted);font-size:10px}
+.dropzone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.upload-progress{display:none;margin-bottom:12px}
+.upload-progress.show{display:block}
+.prog-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.prog-pct{font-family:'Bebas Neue';font-size:18px;background:var(--brand-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.prog-bar-wrap{height:5px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-bottom:5px}
+.prog-bar{height:100%;background:var(--brand-grad);border-radius:3px;width:0%;transition:width .3s}
+.prog-status{font-size:10px;color:var(--muted)}
+.prog-status.done{color:var(--green)}
+.prog-status.err{color:var(--red)}
+.flabel{font-size:10px;font-weight:800;color:var(--muted);margin-bottom:4px;display:block;text-transform:uppercase;letter-spacing:.5px}
+.finput{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Space Grotesk';font-size:12px;outline:none;margin-bottom:10px}
+.finput:focus{border-color:var(--brand)}
+.sub-btn{width:100%;background:var(--brand-grad);color:#000;border:none;border-radius:10px;padding:12px;font-family:'Space Grotesk';font-weight:800;font-size:13px;cursor:pointer;margin-top:3px}
 .sub-btn:disabled{opacity:.5;cursor:not-allowed}
+.sub-btn.job-submit{background:linear-gradient(135deg,var(--job),var(--job2))}
+.cf-warn{background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.15);border-radius:9px;padding:10px;margin-bottom:11px;font-size:11px;color:var(--muted);line-height:1.6}
+.settings-sec{margin-bottom:16px}
+.settings-sec-title{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px}
+.sinput{width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'Space Grotesk';font-size:12px;outline:none;margin-bottom:7px}
+.sinput:focus{border-color:var(--brand)}
+.sbtn{background:var(--brand-grad);color:#000;border:none;border-radius:8px;padding:9px 14px;font-family:'Space Grotesk';font-weight:800;font-size:12px;cursor:pointer}
+.sbtn2{background:var(--surface3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'Space Grotesk';font-weight:700;font-size:12px;cursor:pointer;margin-left:7px}
 
-/* CF not configured warning */
-.cf-warn{background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.25);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--muted);line-height:1.6}
-.cf-warn strong{color:var(--gold)}
+/* ═══ LEGAL PAGES ═══ */
+.legal-content{padding:52px 14px 20px}
+.legal-content h1{font-family:'Bebas Neue';font-size:26px;background:var(--brand-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px}
+.legal-content .last-updated{font-size:10px;color:var(--muted);margin-bottom:20px}
+.legal-content h2{font-size:14px;font-weight:800;color:var(--brand);margin:16px 0 7px}
+.legal-content p{font-size:12px;color:var(--muted2);line-height:1.7;margin-bottom:10px}
+.legal-content ul{padding-left:16px;margin-bottom:10px}
+.legal-content li{font-size:12px;color:var(--muted2);line-height:1.7;margin-bottom:4px}
+.contact-card{background:var(--surface2);border-radius:14px;border:1px solid var(--border);padding:16px;margin-bottom:12px}
+.contact-card h3{font-weight:800;font-size:13px;margin-bottom:10px}
+.contact-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.contact-row svg{width:16px;height:16px;stroke:var(--brand);flex-shrink:0}
+.contact-row a{font-size:12px;color:var(--brand);font-weight:600;text-decoration:none}
 
-/* Toast */
-.toast{position:fixed;top:18px;left:50%;transform:translateX(-50%) translateY(-90px);background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 18px;font-weight:700;font-size:13px;z-index:999;transition:transform .32s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;display:flex;align-items:center;gap:7px;box-shadow:0 4px 24px rgba(0,0,0,.5)}
+/* ═══ NOTIFICATIONS PAGE ═══ */
+.notif-item{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;gap:10px;cursor:pointer;transition:background .15s}
+.notif-item:active{background:var(--surface2)}
+.notif-item.unread{background:rgba(0,229,255,.04)}
+.notif-avatar{width:36px;height:36px;border-radius:50%;background:var(--surface3);flex-shrink:0;background-size:cover;display:flex;align-items:center;justify-content:center;font-size:16px}
+.notif-body{flex:1;min-width:0}
+.notif-text{font-size:12px;line-height:1.5;margin-bottom:2px}
+.notif-text strong{color:var(--brand)}
+.notif-time{font-size:10px;color:var(--muted)}
+.notif-dot{width:7px;height:7px;background:var(--brand);border-radius:50%;flex-shrink:0;margin-top:5px}
+
+/* ═══ TOAST ═══ */
+.toast{position:fixed;top:50px;left:50%;transform:translateX(-50%) translateY(-80px);background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:10px 16px;font-weight:700;font-size:12px;z-index:999;transition:transform .32s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;display:flex;align-items:center;gap:6px;box-shadow:0 4px 24px rgba(0,0,0,.6)}
 .toast.show{transform:translateX(-50%) translateY(0)}
-.tdot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.tdot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
 .tdot.err{background:var(--red)}
+.tdot.info{background:var(--brand)}
+
+/* ═══ SKELETONS ═══ */
+.skeleton{background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:10px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ═══ LOGO STYLES ═══ */
+.logo-bubble{filter:drop-shadow(0 0 8px rgba(0,229,255,.5))}
 </style>
 </head>
 <body>
 <div class="app" id="app">
 
-<!-- TOPBAR -->
+<!-- ══ ENGAGEMENT BAR ══ -->
+<div class="engage-bar" id="engage-bar">
+  <div class="engage-bar-text">💬 Do you like Vaal-Talk Beta and want it to stay active?</div>
+  <div class="engage-votes">
+    <button class="evote-btn yes" id="vote-yes" onclick="castVote('yes')">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Yes
+    </button>
+    <button class="evote-btn no" id="vote-no" onclick="castVote('no')">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> No
+    </button>
+  </div>
+</div>
+
+<!-- ══ TOPBAR ══ -->
 <div class="topbar" id="feed-topbar">
-  <div class="logo">Vaal<span>Talk</span></div>
+  <div class="vt-logo" onclick="navTo('feed')">
+    <!-- VAAL-TALK BETA LOGO SVG -->
+    <div class="vt-logo-icon logo-bubble">
+      <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#00E5FF"/><stop offset="100%" stop-color="#7B2FFF"/></linearGradient>
+          <linearGradient id="lg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#7B2FFF"/><stop offset="100%" stop-color="#FF2D78"/></linearGradient>
+        </defs>
+        <!-- Speech bubble -->
+        <rect x="2" y="2" width="50" height="42" rx="12" fill="url(#lg1)" opacity=".18"/>
+        <rect x="2" y="2" width="50" height="42" rx="12" stroke="url(#lg1)" stroke-width="2"/>
+        <!-- Tail -->
+        <path d="M20 44 L14 56 L30 44Z" fill="url(#lg1)" opacity=".7"/>
+        <!-- V letter -->
+        <path d="M15 14 L27 36 L30 30 L33 36 L45 14" stroke="url(#lg2)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Neon dot -->
+        <circle cx="30" cy="30" r="2" fill="#00E5FF" opacity=".9"/>
+      </svg>
+    </div>
+    <div class="vt-logo-text">
+      <span class="vt">VAAL-TALK</span>
+      <span class="beta">BETA</span>
+    </div>
+  </div>
   <div class="topbar-tabs">
-    <div class="topbar-tab active">For You</div>
-    <div class="topbar-tab">Following</div>
-    <div class="topbar-tab">Kasies</div>
+    <div class="topbar-tab active" id="ttab-foryou" onclick="switchFeedTab('foryou')">For You</div>
+    <div class="topbar-tab" id="ttab-following" onclick="switchFeedTab('following')">Following</div>
+    <div class="topbar-tab" id="ttab-kasies" onclick="switchFeedTab('kasies')">Kasies</div>
   </div>
-  <div class="ticon" onclick="showToast('Search coming soon!')">
-    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-  </div>
-</div>
-
-<!-- CF Stream status bar (shows on feed) -->
-<div class="cf-status-bar" id="cf-status-bar">
-  <div class="cf-pill" id="cf-pill">
-    <div class="cf-dot demo" id="cf-dot"></div>
-    <span id="cf-label">Demo Mode — Configure CF Stream</span>
+  <div class="ticon" onclick="navTo('notifications')">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    <div class="nav-notif" id="notif-badge" style="position:absolute;top:4px;right:4px;width:7px;height:7px;background:var(--red);border-radius:50%"></div>
   </div>
 </div>
 
-<!-- ── PAGE: FEED ── -->
+<!-- ══ PAGE: FEED ══ -->
 <div class="page-fill active" id="page-feed">
   <div class="feed-wrap" id="feed-wrap"></div>
 </div>
 
-<!-- ── PAGE: DISCOVER ── -->
-<div class="page" id="page-discover">
-  <div class="pg-header"><div><div class="pg-title">Discover</div><div class="pg-sub">Trending across the Vaal</div></div></div>
-  <div class="sbar"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" placeholder="Search creators, sounds, places..."/></div>
-  <div class="sec-hd"><div class="sec-title">Trending Now</div><div class="see-all">See All</div></div>
-  <div id="trend-list"></div>
-  <div class="sec-hd" style="margin-top:6px"><div class="sec-title">Top Creators</div><div class="see-all">See All</div></div>
-  <div class="creator-grid" id="creator-grid"></div>
+<!-- ══ PAGE: JOBS ══ -->
+<div class="page" id="page-jobs">
+  <div class="jobs-hero">
+    <div class="jobs-hero-label">🔥 Vaal Region · Live Now</div>
+    <div class="jobs-hero-title">KASI<br/><span class="jhl">QUICK JOBS</span></div>
+    <div class="jobs-hero-sub">Post &amp; find nearby work in minutes</div>
+    <button class="post-job-btn" onclick="openModal('post-job-modal')">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Post a Job
+    </button>
+  </div>
+  <!-- Category filter -->
+  <div class="job-cats" id="job-cats"></div>
+  <div class="sec-hd"><div class="sec-title">📌 Nearby Jobs</div><div class="see-all" onclick="showToast('All jobs coming soon!')">See All</div></div>
+  <div class="jobs-list" id="jobs-list"></div>
   <div style="height:16px"></div>
 </div>
 
-<!-- ── PAGE: MARKETPLACE ── -->
+<!-- ══ PAGE: MARKET ══ -->
 <div class="page" id="page-market">
-  <div class="pg-header"><div><div class="pg-title">Marketplace</div><div class="pg-sub">Buy, sell &amp; shop local</div></div></div>
+  <div class="pg-hd"><div><div class="pg-title"><span class="accent">Marketplace</span></div><div class="pg-sub">Buy, sell &amp; shop local in the Vaal</div></div></div>
   <div class="mkt-tab-bar">
     <div class="mkt-tab active" id="mtab-sell" onclick="switchMkt('sell')">🛍 Kasi Sell</div>
     <div class="mkt-tab" id="mtab-mall" onclick="switchMkt('mall')">🏬 Kasi Mall</div>
   </div>
   <div id="mkt-sell"><div class="mkt-grid" id="mkt-grid"></div><div style="height:16px"></div></div>
   <div id="mkt-mall" style="display:none">
-    <div class="mall-header-banner">
-      <div class="mall-header-text"><strong>Register Your Store</strong><small>R120/month · Admin verified · Gold Badge</small></div>
-      <button class="register-btn" onclick="showToast('Store registration opening soon!')">Open Store</button>
-    </div>
-    <div id="mall-list"></div>
-    <div style="height:16px"></div>
+    <div class="mall-header-banner"><div class="mall-header-text"><strong>Register Your Store</strong><small>R120/month · Admin verified · Gold Badge</small></div><button class="register-btn" onclick="showToast('Store registration opening soon!')">Open Store</button></div>
+    <div id="mall-list"></div><div style="height:16px"></div>
   </div>
 </div>
 
-<!-- ── PAGE: COMMUNITIES ── -->
+<!-- ══ PAGE: COMMUNITIES ══ -->
 <div class="page" id="page-community">
   <div id="kasie-main">
     <div class="kasie-hero"><div class="kasie-hero-title">Your Kasies</div><div class="kasie-hero-sub">Hyper-local communities of the Vaal Region</div></div>
     <div class="live-banner" onclick="showToast('Joining live session...')">
       <div class="live-badge"><div class="live-dot"></div>LIVE</div>
       <div style="flex:1"><div style="font-weight:800;font-size:13px">Vereeniging Town Hall</div><div style="font-size:11px;color:var(--muted)">847 watching · Community Meeting</div></div>
-      <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="2" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="2" width="17" height="17"><polygon points="5 3 19 12 5 21 5 3"/></svg>
     </div>
     <div class="kasie-grid" id="kasie-grid"></div>
-    <div class="req-community" onclick="showToast('Community request submitted! 0/500 votes')" style="border:1px dashed var(--border);text-align:center;padding:16px;cursor:pointer">
-      <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" width="30" height="30" style="margin-bottom:6px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-      <p style="font-weight:800;font-size:13px;margin-bottom:2px">Request New Community</p>
-      <small style="color:var(--muted);font-size:11px">500 votes needed to unlock</small>
+    <div class="req-kasie" onclick="showToast('Community request submitted!')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" width="26" height="26" style="margin-bottom:5px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      <p style="font-weight:800;font-size:12px;margin-bottom:2px">Request New Community</p>
+      <small style="color:var(--muted);font-size:10px">500 votes needed to unlock</small>
     </div>
   </div>
   <div id="kasie-chat-view" style="display:none"></div>
 </div>
 
-<!-- ── PAGE: PROFILE ── -->
+<!-- ══ PAGE: PROFILE ══ -->
 <div class="page" id="page-profile">
-  <div class="profile-cover" style="background-image:url('https://picsum.photos/seed/vaalcover/800/400')">
-    <div class="prof-ov"></div>
-    <div class="prof-av-wrap">
-      <div class="prof-av" style="background-image:url('https://picsum.photos/seed/user1/200/200')"></div>
-      <div class="prof-verified"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+  <!-- Auth prompt -->
+  <div id="profile-auth-prompt" style="display:none;padding:100px 20px;text-align:center">
+    <div style="margin-bottom:20px">
+      <!-- Small logo for auth -->
+      <svg viewBox="0 0 60 60" width="64" height="64" fill="none">
+        <defs><linearGradient id="alg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#00E5FF"/><stop offset="100%" stop-color="#7B2FFF"/></linearGradient></defs>
+        <rect x="2" y="2" width="50" height="42" rx="12" fill="url(#alg1)" opacity=".18"/>
+        <rect x="2" y="2" width="50" height="42" rx="12" stroke="url(#alg1)" stroke-width="2"/>
+        <path d="M20 44 L14 56 L30 44Z" fill="url(#alg1)" opacity=".7"/>
+        <path d="M15 14 L27 36 L30 30 L33 36 L45 14" stroke="#FF2D78" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
     </div>
+    <div style="font-family:'Bebas Neue';font-size:22px;margin-bottom:4px">VAAL-TALK BETA</div>
+    <p style="font-weight:800;font-size:15px;margin-bottom:6px">Join the Vaal community</p>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:20px">Create your profile, follow creators,<br/>and join your local Kasie</p>
+    <button onclick="openAuth()" style="background:var(--brand-grad);color:#000;border:none;border-radius:10px;padding:13px 30px;font-family:'Space Grotesk';font-weight:800;font-size:14px;cursor:pointer">Sign In / Sign Up</button>
   </div>
-  <div class="prof-hd">
-    <div class="prof-name">Thabo Nkosi</div>
-    <div class="prof-handle">@thabo_vaal · Vereeniging</div>
-    <div class="prof-bio">🎬 Content Creator | Vaal 🌍 | Rep'n the kasi every day 🔥</div>
-    <div class="prof-stats">
-      <div class="stat-box"><div class="snum">24.6K</div><div class="slabel">Followers</div></div>
-      <div class="stat-box"><div class="snum">891</div><div class="slabel">Following</div></div>
-      <div class="stat-box"><div class="snum">482K</div><div class="slabel">Likes</div></div>
-    </div>
-  </div>
-  <div class="prof-btns">
-    <button class="edit-btn" onclick="showToast('Edit profile coming soon!')">Edit Profile</button>
-    <div class="share-btn" onclick="showToast('Profile link copied!')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></div>
-  </div>
-  <div class="prem-badge">
-    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-    <div><strong>Premium Privacy Active</strong><small>Private profile · Enhanced security · R20/month</small></div>
-  </div>
-  <div class="prof-grid" id="prof-grid"></div>
-  <div style="margin-top:16px">
-    <div class="menu-item" onclick="navTo('admin')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="menu-item-text">Admin Dashboard</span><span class="menu-chevron">›</span></div>
-    <div class="menu-item" onclick="openCFSettings()">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-      <span class="menu-item-text">Cloudflare Stream Setup</span>
-      <span id="cf-menu-status" style="font-size:10px;font-weight:800;color:var(--muted)">Not Connected</span>
-    </div>
-    <div class="menu-item" onclick="showToast('Settings coming soon!')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="menu-item-text">Settings &amp; Privacy</span><span class="menu-chevron">›</span></div>
-    <div class="menu-item" onclick="navTo('market');switchMkt('mall')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="menu-item-text">My Kasi Mall Store</span><span class="menu-chevron">›</span></div>
-    <div class="menu-item" onclick="showToast('Logged out. See you!')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke="var(--red)"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span class="menu-item-text" style="color:var(--red)">Log Out</span><span class="menu-chevron">›</span></div>
-  </div>
-  <div style="height:16px"></div>
-</div>
-
-<!-- ── PAGE: ADMIN ── -->
-<div class="page" id="page-admin">
-  <div class="admin-wrap">
-    <div class="admin-hd">
-      <div class="admin-back" onclick="navTo('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2" width="17" height="17"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></div>
-      <div><div class="admin-title"><span>Admin</span> Panel</div><div style="font-size:11px;color:var(--muted)">Vaal Talk Management Console</div></div>
-    </div>
-    <div class="stat-cards">
-      <div class="scard"><div class="scard-label">Total Users</div><div class="scard-num" style="color:var(--gold)">14,872</div><div class="scard-change" style="color:var(--green)">+342 today</div></div>
-      <div class="scard"><div class="scard-label">Active Now</div><div class="scard-num" style="color:var(--blue)">1,247</div><div class="scard-change" style="color:var(--muted)">Live sessions</div></div>
-      <div class="scard"><div class="scard-label">Pending Reports</div><div class="scard-num" style="color:var(--red)">38</div><div class="scard-change" style="color:var(--red)">6 high risk</div></div>
-      <div class="scard"><div class="scard-label">Total Videos</div><div class="scard-num" style="color:var(--green)">92,481</div><div class="scard-change" style="color:var(--muted)">+1.2K today</div></div>
-    </div>
-
-    <!-- CF Stream Stats in Admin -->
-    <div class="admin-sec">
-      <div class="admin-sec-title">Cloudflare Stream</div>
-      <div style="background:var(--surface2);border-radius:12px;border:1px solid rgba(245,166,35,.2);padding:14px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-          <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" width="18" height="18"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          <div>
-            <div style="font-weight:800;font-size:13px">Stream Status</div>
-            <div style="font-size:11px;color:var(--muted)" id="admin-cf-status">Not configured</div>
-          </div>
-          <button onclick="openCFSettings()" style="margin-left:auto;background:var(--gold);color:#000;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:800;cursor:pointer">Configure</button>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div style="background:var(--surface3);border-radius:9px;padding:10px;text-align:center"><div style="font-family:'Bebas Neue';font-size:24px;color:var(--gold)" id="admin-video-count">—</div><div style="font-size:10px;color:var(--muted)">Videos Stored</div></div>
-          <div style="background:var(--surface3);border-radius:9px;padding:10px;text-align:center"><div style="font-family:'Bebas Neue';font-size:24px;color:var(--green)" id="admin-storage">—</div><div style="font-size:10px;color:var(--muted)">Storage Used</div></div>
-        </div>
+  <!-- Authenticated profile -->
+  <div id="profile-authenticated" style="display:none">
+    <div class="profile-cover" style="background-image:url('https://picsum.photos/seed/vaalcover/800/400')">
+      <div class="prof-ov"></div>
+      <div class="prof-av-wrap">
+        <div class="prof-av" id="profile-avatar" style="background-image:url('https://picsum.photos/seed/user1/200/200')"></div>
+        <div class="prof-verified"><svg viewBox="0 0 24 24" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
       </div>
     </div>
-
-    <div class="admin-sec"><div class="admin-sec-title">Moderation Queue</div><div id="reports-list"></div></div>
-    <div class="admin-sec">
-      <div class="admin-sec-title">Kasi Mall Approvals</div>
-      <div style="background:var(--surface2);border-radius:12px;padding:13px;border:1px solid var(--border);display:flex;align-items:center;gap:11px">
-        <div class="mall-logo" style="width:46px;height:46px;font-size:13px">KF</div>
-        <div style="flex:1"><div style="font-weight:800;font-size:13px">Kasi Flavours</div><div style="font-size:11px;color:var(--muted)">Food &amp; Catering · Vereeniging</div></div>
-        <div style="display:flex;gap:6px">
-          <button onclick="showToast('Store approved ✓')" style="background:rgba(0,200,83,.15);color:var(--green);border:none;border-radius:8px;padding:7px 10px;font-size:11px;font-weight:800;cursor:pointer">Approve</button>
-          <button onclick="showToast('Store rejected')" style="background:rgba(255,59,48,.1);color:var(--red);border:none;border-radius:8px;padding:7px 10px;font-size:11px;font-weight:800;cursor:pointer">Reject</button>
-        </div>
+    <div class="prof-hd">
+      <div class="prof-name" id="profile-name">Loading...</div>
+      <div class="prof-handle" id="profile-handle">@vaaltalk</div>
+      <div class="prof-bio">Vaal Talk Beta member 🔥</div>
+      <div class="prof-stats">
+        <div class="stat-box"><div class="snum">0</div><div class="slabel">Followers</div></div>
+        <div class="stat-box"><div class="snum">0</div><div class="slabel">Following</div></div>
+        <div class="stat-box"><div class="snum">0</div><div class="slabel">Likes</div></div>
       </div>
+    </div>
+    <div class="prof-btns">
+      <button class="edit-btn" onclick="showToast('Edit profile coming soon!')">Edit Profile</button>
+      <div class="share-btn" onclick="openInvite()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></div>
+    </div>
+    <!-- Invite card -->
+    <div class="invite-card">
+      <div class="invite-card-title"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Invite Friends</div>
+      <div class="invite-card-sub">Share Vaal-Talk Beta with your community 🔥</div>
+      <div class="invite-platforms" id="invite-platforms"></div>
+    </div>
+    <div class="prem-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" style="stroke:url(#lg1)"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <div><strong style="background:var(--brand-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Premium Privacy</strong><small>Upgrade for R20/month</small></div>
+    </div>
+    <div class="prof-grid" id="prof-grid"></div>
+    <div style="margin-top:14px">
+      <div class="menu-item" onclick="openSettings()"><svg viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span class="menu-item-text">Stream &amp; Supabase Setup</span><span class="menu-chevron">›</span></div>
+      <div class="menu-item" onclick="navTo('notifications')"><svg viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="menu-item-text">Notifications</span><span class="menu-chevron">›</span></div>
+      <div class="menu-item" onclick="navTo('terms')"><svg viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="menu-item-text">Terms &amp; Conditions</span><span class="menu-chevron">›</span></div>
+      <div class="menu-item" onclick="navTo('privacy')"><svg viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="menu-item-text">Privacy Policy</span><span class="menu-chevron">›</span></div>
+      <div class="menu-item" onclick="navTo('contact')"><svg viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg><span class="menu-item-text">Contact Us</span><span class="menu-chevron">›</span></div>
+      <div class="menu-item" onclick="signOut()"><svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span class="menu-item-text" style="color:var(--red)">Sign Out</span><span class="menu-chevron">›</span></div>
+    </div>
+    <!-- Social bar -->
+    <div class="social-bar">
+      <a class="social-link youtube" href="https://youtube.com/@vaaltalkbeta?si=Zkm46bvG_6808HGC" target="_blank" rel="noopener noreferrer" title="YouTube">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="#FF0000" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><polygon fill="#fff" points="9.545,15.568 15.818,12 9.545,8.432"/></svg>
+      </a>
+      <a class="social-link twitter" href="https://x.com/Vaal_Talk_Beta" target="_blank" rel="noopener noreferrer" title="X (Twitter)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      </a>
+      <a class="social-link facebook" href="https://www.facebook.com/share/18otiMURx1/" target="_blank" rel="noopener noreferrer" title="Facebook">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+      </a>
     </div>
     <div style="height:16px"></div>
   </div>
 </div>
 
-<!-- BOTTOM NAV -->
+<!-- ══ PAGE: NOTIFICATIONS ══ -->
+<div class="page" id="page-notifications">
+  <div class="pg-hd"><div><div class="pg-title"><span class="accent">Notifications</span></div><div class="pg-sub">Your latest activity</div></div><div onclick="navTo('profile')" style="cursor:pointer"><svg viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" width="20" height="20"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></div></div>
+  <div id="notif-list"></div>
+</div>
+
+<!-- ══ PAGE: TERMS ══ -->
+<div class="page" id="page-terms">
+  <div class="legal-content">
+    <div onclick="navTo('profile')" style="cursor:pointer;margin-bottom:12px;display:flex;align-items:center;gap:6px;color:var(--brand);font-size:12px;font-weight:700"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>Back</div>
+    <h1>Terms &amp; Conditions</h1>
+    <div class="last-updated">Last updated: April 2026</div>
+    <h2>1. Acceptance of Terms</h2>
+    <p>By accessing or using Vaal-Talk Beta ("the Platform"), you agree to be bound by these Terms and Conditions. If you do not agree, please do not use the Platform.</p>
+    <h2>2. User Responsibilities</h2>
+    <p>Users are solely responsible for the content they post. You agree not to post content that is:</p>
+    <ul><li>Illegal, harmful, or offensive</li><li>Sexually explicit or violent</li><li>Spam or misleading information</li><li>In violation of any third party's intellectual property</li></ul>
+    <h2>3. Content Moderation</h2>
+    <p>Vaal-Talk Beta reserves the right to remove any content that violates these terms. Content reported 5 or more times may be automatically hidden pending admin review. Repeated violations may result in account suspension or permanent ban.</p>
+    <h2>4. Marketplace Disclaimer</h2>
+    <p>Vaal-Talk Beta is not responsible for transactions between buyers and sellers on Kasi Sell or Kasi Mall. We do not guarantee the quality, safety, or legality of items listed. Users engage in marketplace transactions at their own risk.</p>
+    <h2>5. Platform Rights</h2>
+    <p>By posting content, you grant Vaal-Talk Beta a non-exclusive, royalty-free license to display your content on the Platform. You retain ownership of your content.</p>
+    <h2>6. Community Access</h2>
+    <p>Community access is restricted to verified members. Attempting to access communities you are not a member of is prohibited and may result in account termination.</p>
+    <h2>7. Kasi Quick Jobs</h2>
+    <p>Job listings must be legitimate. Vaal-Talk Beta does not verify employers or job seekers. Users are responsible for verifying the authenticity of job listings and applicants.</p>
+    <h2>8. Changes to Terms</h2>
+    <p>We reserve the right to modify these terms at any time. Continued use of the Platform after changes constitutes acceptance of the new terms.</p>
+    <h2>9. Contact</h2>
+    <p>For questions about these terms, contact us at <a href="mailto:vaal.support@gmail.com" style="color:var(--brand)">vaal.support@gmail.com</a></p>
+  </div>
+</div>
+
+<!-- ══ PAGE: PRIVACY ══ -->
+<div class="page" id="page-privacy">
+  <div class="legal-content">
+    <div onclick="navTo('profile')" style="cursor:pointer;margin-bottom:12px;display:flex;align-items:center;gap:6px;color:var(--brand);font-size:12px;font-weight:700"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>Back</div>
+    <h1>Privacy Policy</h1>
+    <div class="last-updated">Last updated: April 2026 · POPIA Compliant</div>
+    <h2>1. Data We Collect</h2>
+    <p>We collect the following information when you use Vaal-Talk Beta:</p>
+    <ul><li>Email address and username (registration)</li><li>Profile information (name, bio, profile picture)</li><li>Content you post (videos, listings, messages)</li><li>Community membership information</li><li>Usage data and interaction history</li></ul>
+    <h2>2. How We Use Your Data</h2>
+    <p>Your data is used to:</p>
+    <ul><li>Provide and improve the Platform</li><li>Personalise your experience</li><li>Send relevant notifications (with your consent)</li><li>Enforce our Terms and Conditions</li><li>Comply with legal obligations</li></ul>
+    <h2>3. Supabase Storage</h2>
+    <p>All user data is stored securely on Supabase infrastructure with encryption at rest and in transit. Supabase complies with international data protection standards. Your data is stored on secure servers and is not accessible to unauthorised parties.</p>
+    <h2>4. OneSignal Notifications</h2>
+    <p>We use OneSignal to deliver push notifications. OneSignal may collect device identifiers to deliver notifications. You can opt out of notifications at any time in your device settings. We only send relevant, non-spam notifications about activity directly related to your account.</p>
+    <h2>5. No Data Selling Policy</h2>
+    <p><strong>We do not sell, rent, or trade your personal data to any third parties.</strong> Your information is used exclusively to operate and improve Vaal-Talk Beta.</p>
+    <h2>6. Data Sharing</h2>
+    <p>We may share anonymised, aggregated data for analytics purposes. We will only share personal data with third parties when legally required to do so.</p>
+    <h2>7. Your Rights (POPIA)</h2>
+    <p>Under the Protection of Personal Information Act (POPIA), you have the right to:</p>
+    <ul><li>Access your personal data</li><li>Correct inaccurate data</li><li>Request deletion of your data</li><li>Object to processing of your data</li></ul>
+    <h2>8. Cookies</h2>
+    <p>We use minimal cookies for authentication and session management only. We do not use tracking or advertising cookies.</p>
+    <h2>9. Contact</h2>
+    <p>For privacy concerns, contact our team at <a href="mailto:vaal.support@gmail.com" style="color:var(--brand)">vaal.support@gmail.com</a></p>
+  </div>
+</div>
+
+<!-- ══ PAGE: CONTACT ══ -->
+<div class="page" id="page-contact">
+  <div class="legal-content">
+    <div onclick="navTo('profile')" style="cursor:pointer;margin-bottom:12px;display:flex;align-items:center;gap:6px;color:var(--brand);font-size:12px;font-weight:700"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>Back</div>
+    <h1>Contact Us</h1>
+    <div class="last-updated">We're here to help the Vaal community</div>
+    <div class="contact-card">
+      <h3>📬 Get in Touch</h3>
+      <div class="contact-row"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg><a href="mailto:vaal.support@gmail.com">vaal.support@gmail.com</a></div>
+      <div class="contact-row"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l1.12-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><a href="tel:+27689657528">(+27) 68 965 7528</a></div>
+    </div>
+    <div class="contact-card">
+      <h3>📱 Follow Us</h3>
+      <div class="contact-row"><svg viewBox="0 0 24 24" width="16" height="16"><rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="#FF0000" stroke-width="2"/><polygon fill="#FF0000" points="10,8 16,12 10,16"/></svg><a href="https://youtube.com/@vaaltalkbeta" target="_blank" rel="noopener noreferrer">youtube.com/@vaaltalkbeta</a></div>
+      <div class="contact-row"><svg viewBox="0 0 24 24" width="16" height="16" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg><a href="https://x.com/Vaal_Talk_Beta" target="_blank" rel="noopener noreferrer">x.com/Vaal_Talk_Beta</a></div>
+      <div class="contact-row"><svg viewBox="0 0 24 24" width="16" height="16"><path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg><a href="https://www.facebook.com/share/18otiMURx1/" target="_blank" rel="noopener noreferrer">facebook.com/vaaltalkbeta</a></div>
+    </div>
+    <div class="contact-card">
+      <h3>🕐 Support Hours</h3>
+      <p>Monday – Friday: 08:00 – 17:00<br/>Saturday: 09:00 – 13:00<br/>Sunday: Closed</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BOTTOM NAV ══ -->
 <nav class="bottom-nav" id="bottom-nav">
   <div class="nav-item active" id="nav-feed" onclick="navTo('feed')">
     <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="2" y="3" width="9" height="9" rx="2"/><rect x="13" y="3" width="9" height="9" rx="2"/><rect x="2" y="14" width="9" height="9" rx="2"/><rect x="13" y="14" width="9" height="9" rx="2"/></svg>
     <span>Feed</span>
   </div>
+  <div class="nav-item jobs-nav" id="nav-jobs" onclick="navTo('jobs')">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+    <span>Jobs</span>
+  </div>
+  <div class="nav-upload" onclick="openUpload()">
+    <div class="nav-upload-ring"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+    <span>Post</span>
+  </div>
   <div class="nav-item" id="nav-market" onclick="navTo('market')">
     <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
     <span>Market</span>
-  </div>
-  <div class="nav-upload" onclick="openUpload()">
-    <div class="nav-upload-btn"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
-    <span>Post</span>
   </div>
   <div class="nav-item" id="nav-community" onclick="navTo('community')">
     <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -512,579 +729,545 @@ stream.stream-player{display:block}
   </div>
 </nav>
 
-<!-- FAB: Sell item -->
+<!-- FABs -->
 <div class="sell-fab" id="sell-fab" onclick="openModal('sell-modal')">
   <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 </div>
 
-<!-- MODAL: CF Stream Settings -->
-<div class="modal-ov hidden" id="cf-modal" onclick="closeModal('cf-modal')">
+<!-- ══ MODAL: POST JOB ══ -->
+<div class="modal-ov hidden" id="post-job-modal" onclick="closeModal('post-job-modal')">
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="mhandle"></div>
-    <div class="mtitle">
-      ⚡ Cloudflare Stream Setup
-    </div>
-    <div style="padding:16px">
-      <div style="background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.2);border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--muted);line-height:1.6">
-        <strong style="color:var(--gold)">How it works:</strong> Deploy the included <code style="background:var(--surface3);padding:1px 5px;border-radius:4px">cf-stream-worker.js</code> as a Cloudflare Worker. It generates one-time TUS upload URLs without exposing your API token to the browser.
+    <div class="upload-body">
+      <div class="upload-title" style="-webkit-text-fill-color:var(--job);background:none;color:var(--job)">Post a Job</div>
+      <div class="flabel">Job Type</div>
+      <div class="job-types" id="job-type-selector">
+        <div class="jtype-btn active" data-type="full-time" onclick="selectJobType(this)">Full-time</div>
+        <div class="jtype-btn" data-type="part-time" onclick="selectJobType(this)">Part-time</div>
+        <div class="jtype-btn" data-type="once-off" onclick="selectJobType(this)">Once-off</div>
+        <div class="jtype-btn" data-type="remote" onclick="selectJobType(this)">Remote</div>
       </div>
-      <label class="cf-label">Worker URL</label>
-      <input class="cf-input" id="cf-worker-url" placeholder="https://your-worker.workers.dev" style="margin-bottom:12px"/>
-      <label class="cf-label" style="margin-top:4px">Account ID <span style="color:var(--muted);font-weight:400;text-transform:none">(for stream player embed)</span></label>
-      <input class="cf-input" id="cf-account-id" placeholder="Your Cloudflare Account ID" style="margin-bottom:16px"/>
-      <button class="cf-save-btn" onclick="saveCFConfig()">Save &amp; Connect</button>
-      <button class="cf-test-btn" onclick="testCFConnection()">Test Connection</button>
-      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-        <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Worker Setup Commands</div>
-        <div style="background:var(--bg);border-radius:8px;padding:12px;font-family:monospace;font-size:11px;color:var(--gold);line-height:2">
-          npm install -g wrangler<br/>
-          wrangler login<br/>
-          wrangler secret put CF_ACCOUNT_ID<br/>
-          wrangler secret put CF_API_TOKEN<br/>
-          wrangler deploy
-        </div>
-      </div>
+      <label class="flabel">Job Title</label><input class="finput" id="job-title-input" placeholder="e.g. Garden Maintenance Needed"/>
+      <label class="flabel">Description</label><textarea class="finput" id="job-desc-input" rows="3" placeholder="What does the job involve? Requirements..." style="resize:none"></textarea>
+      <label class="flabel">Pay / Rate (R)</label><input class="finput" id="job-pay-input" type="text" placeholder="e.g. R500/day or Negotiable"/>
+      <label class="flabel">Location</label>
+      <select class="finput" id="job-location-input" style="appearance:none">
+        <option>Vereeniging</option><option>Rust-Ter-Vaal</option><option>Meyerton</option><option>Roshnee</option><option>De Deur</option><option>Bophelong</option><option>Vanderbijlpark</option>
+      </select>
+      <label class="flabel">Contact</label><input class="finput" id="job-contact-input" placeholder="Phone number or WhatsApp"/>
+      <button class="sub-btn job-submit" onclick="submitJob()">Post Job Now</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: Upload Video (with CF Stream TUS upload) -->
+<!-- ══ MODAL: UPLOAD VIDEO ══ -->
 <div class="modal-ov hidden" id="upload-modal" onclick="closeModal('upload-modal')">
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="mhandle"></div>
     <div class="upload-body">
       <div class="upload-title">Post a Video</div>
-
-      <!-- Upload stages -->
       <div class="upload-stages">
         <div class="ustage active" id="stage-1">1. Select</div>
         <div class="ustage" id="stage-2">2. Upload</div>
         <div class="ustage" id="stage-3">3. Publish</div>
       </div>
-
-      <!-- CF not configured warning -->
-      <div class="cf-warn" id="cf-upload-warn" style="display:none">
-        ⚠️ <strong>Cloudflare Stream not connected.</strong> Go to Profile → Cloudflare Stream Setup to configure. Without it, uploads won't work.
-      </div>
-
-      <!-- Drop zone -->
+      <div class="cf-warn" id="cf-upload-warn" style="display:none">⚠️ <strong style="color:var(--brand)">Cloudflare Stream not connected.</strong> Go to Profile → Setup to configure.</div>
       <div class="dropzone" id="dropzone">
         <input type="file" accept="video/*" onchange="onFileSelected(this)"/>
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
-        <p>Tap to select video</p>
-        <small>MP4 · MOV · Up to 100MB · Max 3 mins</small>
+        <p>Tap to select video</p><small>MP4 · MOV · Max 100MB · 3 mins</small>
       </div>
-
-      <!-- Progress -->
       <div class="upload-progress" id="upload-progress">
-        <div class="progress-header">
-          <div class="progress-file">
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" width="16" height="16"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-            <span id="progress-filename">video.mp4</span>
-          </div>
-          <div class="progress-pct" id="progress-pct">0%</div>
-        </div>
-        <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
-        <div class="progress-status" id="progress-status">Connecting to Cloudflare Stream...</div>
+        <div class="prog-header"><span id="prog-filename" style="font-size:11px;font-weight:700">video.mp4</span><div class="prog-pct" id="prog-pct">0%</div></div>
+        <div class="prog-bar-wrap"><div class="prog-bar" id="prog-bar"></div></div>
+        <div class="prog-status" id="prog-status">Connecting...</div>
       </div>
-
-      <!-- Metadata fields -->
-      <label class="flabel">Caption</label>
-      <input class="finput" id="upload-caption" placeholder="Describe your video..."/>
+      <label class="flabel">Caption</label><input class="finput" id="upload-caption" placeholder="Describe your video..."/>
       <label class="flabel">Community</label>
-      <select class="finput" id="upload-community" style="appearance:none">
-        <option>Vereeniging</option><option>Rust-Ter-Vaal</option><option>Meyerton</option><option>Roshnee</option><option>De Deur</option>
-      </select>
-      <label class="flabel">Tags</label>
-      <input class="finput" id="upload-tags" placeholder="#VaalVibes #Kasi ..."/>
+      <select class="finput" id="upload-community" style="appearance:none"><option>Vereeniging</option><option>Rust-Ter-Vaal</option><option>Meyerton</option><option>Roshnee</option><option>De Deur</option></select>
+      <label class="flabel">Tags</label><input class="finput" id="upload-tags" placeholder="#VaalVibes #Kasi ..."/>
       <button class="sub-btn" id="upload-submit-btn" onclick="startUpload()" disabled>Select a video first</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: Comments -->
+<!-- ══ MODAL: COMMENTS ══ -->
 <div class="modal-ov hidden" id="comment-modal" onclick="closeModal('comment-modal')">
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="mhandle"></div>
-    <div class="mtitle">Comments <span style="color:var(--muted);font-weight:400;font-size:12px">(248)</span></div>
+    <div class="mtitle">Comments <span style="color:var(--muted);font-weight:400;font-size:11px">(248)</span></div>
     <div id="comments-list"></div>
-    <div class="cinput-row">
-      <div class="cav" style="background-image:url('https://picsum.photos/seed/user1/100/100')"></div>
-      <input class="cfield" placeholder="Add a comment..."/>
-      <button class="cpost-btn" onclick="showToast('Comment posted!')">Post</button>
-    </div>
+    <div class="cinput-row"><div class="cav" style="background-image:url('https://picsum.photos/seed/me/100/100')"></div><input class="cfield" placeholder="Add a comment..."/><button class="cpost-btn" onclick="showToast('Comment posted! 🔥')">Post</button></div>
   </div>
 </div>
 
-<!-- MODAL: Sell Item -->
+<!-- ══ MODAL: SELL ITEM ══ -->
 <div class="modal-ov hidden" id="sell-modal" onclick="closeModal('sell-modal')">
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="mhandle"></div>
     <div class="upload-body">
       <div class="upload-title">List Item for Sale</div>
-      <label class="flabel">Item Title</label><input class="finput" placeholder="What are you selling?"/>
+      <label class="flabel">Title</label><input class="finput" placeholder="What are you selling?"/>
       <label class="flabel">Price (R)</label><input class="finput" type="number" placeholder="0.00"/>
       <label class="flabel">Description</label><input class="finput" placeholder="Condition, size, details..."/>
-      <label class="flabel">Category</label>
-      <select class="finput" style="appearance:none"><option>Electronics</option><option>Clothing</option><option>Furniture</option><option>Food</option><option>Services</option><option>Vehicles</option></select>
-      <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:9px;padding:10px;margin-bottom:12px;font-size:12px;color:var(--muted)">💡 Platform fee: <strong style="color:var(--gold)">4.5%</strong> on successful sale. Payments via PayFast / Ozow.</div>
-      <button class="sub-btn" onclick="showToast('Item listed successfully!');closeModal('sell-modal')">List Item</button>
+      <label class="flabel">Category</label><select class="finput" style="appearance:none"><option>Electronics</option><option>Clothing</option><option>Furniture</option><option>Food</option><option>Services</option><option>Vehicles</option></select>
+      <div style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.15);border-radius:8px;padding:9px;margin-bottom:11px;font-size:11px;color:var(--muted)">💡 Platform fee: <strong style="color:var(--brand)">4.5%</strong> on successful sale · PayFast / Ozow</div>
+      <button class="sub-btn" onclick="showToast('Item listed! 🎉');closeModal('sell-modal')">List Item</button>
     </div>
   </div>
 </div>
 
+<!-- ══ MODAL: SETTINGS ══ -->
+<div class="modal-ov hidden" id="settings-modal" onclick="closeModal('settings-modal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="mhandle"></div>
+    <div class="upload-body">
+      <div class="upload-title">Setup &amp; Config</div>
+      <div class="settings-sec">
+        <div class="settings-sec-title">Supabase Backend</div>
+        <input class="sinput" id="sb-url-input" value="https://hvrhezsiqxplemhtqtci.supabase.co" readonly style="opacity:.7"/>
+        <input class="sinput" id="sb-key-input" placeholder="Supabase anon key (pre-filled)"/>
+        <button class="sbtn" onclick="testSupabase()">Test Connection</button>
+      </div>
+      <div class="settings-sec" style="margin-top:14px">
+        <div class="settings-sec-title">Cloudflare Stream</div>
+        <input class="sinput" id="cf-worker-input" placeholder="https://your-worker.workers.dev"/>
+        <input class="sinput" id="cf-account-input" placeholder="CF Account ID"/>
+        <button class="sbtn" onclick="saveCF()">Save</button>
+        <button class="sbtn2" onclick="testCF()">Test</button>
+      </div>
+      <div style="margin-top:14px;background:var(--surface3);border-radius:9px;padding:12px;font-family:monospace;font-size:10px;color:var(--brand);line-height:1.9">
+        Supabase URL: hvrhezsiqxplemhtqtci.supabase.co<br/>
+        CF Worker: wrangler deploy cf-stream-worker.js<br/>
+        Run SQL: supabase-schema.sql in SQL Editor
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: INVITE ══ -->
+<div class="modal-ov hidden" id="invite-modal" onclick="closeModal('invite-modal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="mhandle"></div>
+    <div class="mtitle">🔥 Invite Friends to Vaal-Talk Beta</div>
+    <div style="padding:14px">
+      <div style="background:var(--surface2);border-radius:10px;padding:11px;border:1px solid var(--border);margin-bottom:14px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:5px">Your referral link</div>
+        <div style="font-size:12px;color:var(--brand);font-weight:700;word-break:break-all" id="referral-link">vaaltalk.app/join?ref=user123</div>
+      </div>
+      <div class="settings-sec-title">Share on</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="invite-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ AUTH MODAL ══ -->
+<div class="auth-modal hidden" id="auth-modal">
+  <div class="auth-sheet">
+    <div class="auth-logo-wrap">
+      <svg viewBox="0 0 60 60" width="52" height="52" fill="none">
+        <defs><linearGradient id="alg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#00E5FF"/><stop offset="100%" stop-color="#7B2FFF"/></linearGradient></defs>
+        <rect x="2" y="2" width="50" height="42" rx="12" fill="url(#alg2)" opacity=".18"/>
+        <rect x="2" y="2" width="50" height="42" rx="12" stroke="url(#alg2)" stroke-width="2"/>
+        <path d="M20 44 L14 56 L30 44Z" fill="url(#alg2)" opacity=".7"/>
+        <path d="M15 14 L27 36 L30 30 L33 36 L45 14" stroke="#FF2D78" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div style="font-family:'Bebas Neue';font-size:20px;letter-spacing:1px;margin-top:6px">VAAL-TALK <span style="color:var(--brand3)">BETA</span></div>
+    </div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="auth-tab-signin" onclick="switchAuthTab('signin')">Sign In</div>
+      <div class="auth-tab" id="auth-tab-signup" onclick="switchAuthTab('signup')">Sign Up</div>
+    </div>
+    <div id="signup-extra" style="display:none">
+      <label class="auth-label">Username</label>
+      <input class="auth-input" id="auth-username" placeholder="yourname"/>
+    </div>
+    <label class="auth-label">Email</label>
+    <input class="auth-input" id="auth-email" type="email" placeholder="you@email.com"/>
+    <label class="auth-label">Password</label>
+    <input class="auth-input" id="auth-password" type="password" placeholder="Min 6 characters"/>
+    <button class="auth-btn" id="auth-submit-btn" onclick="handleAuth()">Sign In</button>
+    <div class="auth-error" id="auth-error"></div>
+    <span class="auth-skip" onclick="closeModal('auth-modal')">Continue as guest</span>
+  </div>
+</div>
+
+<!-- TOAST -->
 <div class="toast" id="toast"><div class="tdot" id="tdot"></div><span id="tmsg"></span></div>
 </div><!-- end .app -->
 
 <script>
-// ─────────────────────────────────────────────────────
-//  APP STATE
-// ─────────────────────────────────────────────────────
-const state = {
-  cf: {
-    workerUrl: localStorage.getItem('cf_worker_url') || '',
-    accountId: localStorage.getItem('cf_account_id') || '',
-    connected: false,
-  },
-  // Videos in the feed — uid is null in demo mode
-  feedVideos: [
-    {user:'Lerato_Dlamini',loc:'Vereeniging',desc:'This braai hits different on a Sunday 🔥🥩 nothing like it in the Vaal',tags:['#VaalVibes','#Braai','#SundayMood'],likes:'142.4K',comments:'2.8K',shares:'18.2K',img:'https://picsum.photos/seed/vf1/400/700',uid:null,liked:false,following:false},
-    {user:'Sipho_Beats',loc:'Rust-Ter-Vaal',desc:'New amapiano beat just dropped 🎵✨ produced right here in the kasi',tags:['#Amapiano','#Kasi','#NewMusic'],likes:'89.1K',comments:'1.4K',shares:'42.7K',img:'https://picsum.photos/seed/vf2/400/700',uid:null,liked:true,following:true},
-    {user:'NomvulaTV',loc:'Meyerton',desc:'POV: Saturday at Meyerton mall with the squad 🛍️💅🏾',tags:['#Meyerton','#MallVibes','#Squad'],likes:'54.8K',comments:'987',shares:'8.9K',img:'https://picsum.photos/seed/vf3/400/700',uid:null,liked:false,following:false},
-    {user:'Thabo_Nkosi',loc:'Vereeniging',desc:'Teaching my little bro how to drive 😂🚗 Vaal roads certified!',tags:['#Family','#Vaal','#Funny'],likes:'220.3K',comments:'4.2K',shares:'67.1K',img:'https://picsum.photos/seed/vf4/400/700',uid:null,liked:false,following:true},
-    {user:'Zinhle_Creates',loc:'Roshnee',desc:'Homemade fat cakes recipe that will change your life 🍩✨ Watch till end',tags:['#FatCakes','#Recipe','#KasiFood'],likes:'312.9K',comments:'6.7K',shares:'98.4K',img:'https://picsum.photos/seed/vf5/400/700',uid:null,liked:false,following:false},
-    {user:'VaalKid_Chris',loc:'De Deur',desc:'Sunrise from the Vaal Dam this morning 🌅 God is good 🙏🏾',tags:['#VaalDam','#Sunrise','#Blessed'],likes:'78.6K',comments:'1.1K',shares:'22.3K',img:'https://picsum.photos/seed/vf6/400/700',uid:null,liked:true,following:false},
-  ],
-  uploadFile: null,
-  uploadUid: null,
-  tusUpload: null,
+// ═══════════════════════════════════════════════════════════════
+//  VAAL-TALK BETA — MAIN SCRIPT
+//  Supabase: hvrhezsiqxplemhtqtci.supabase.co
+// ═══════════════════════════════════════════════════════════════
+
+const SB_URL = 'https://hvrhezsiqxplemhtqtci.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh2cmhlenNpcXhwbGVtaHRxdGNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MTEwNDMsImV4cCI6MjA5MjM4NzA0M30.QxRH5NFKx3ayRxcL5mQ-VEs4aLdiUuJSXM-VLAPhR18';
+
+const CFG = {
+  cfWorker: localStorage.getItem('vt_cf_worker') || '',
+  cfAcct:   localStorage.getItem('vt_cf_acct') || '',
 };
 
-// ─────────────────────────────────────────────────────
-//  CLOUDFLARE STREAM CONFIG
-// ─────────────────────────────────────────────────────
-function saveCFConfig() {
-  const workerUrl = document.getElementById('cf-worker-url').value.trim().replace(/\/$/, '');
-  const accountId = document.getElementById('cf-account-id').value.trim();
-  if (!workerUrl) { showToast('Enter your Worker URL', true); return; }
-  state.cf.workerUrl = workerUrl;
-  state.cf.accountId = accountId;
-  localStorage.setItem('cf_worker_url', workerUrl);
-  localStorage.setItem('cf_account_id', accountId);
-  showToast('Config saved! Testing connection...');
-  closeModal('cf-modal');
-  testCFConnection(true);
-}
+const STATE = {
+  user: null,
+  sb: null,
+  cfConnected: false,
+  voteCast: localStorage.getItem('vt_vote') || null,
+  uploadFile: null,
+  tusUpload: null,
+  selectedJobType: 'full-time',
+};
 
-async function testCFConnection(silent = false) {
-  const url = state.cf.workerUrl;
-  if (!url) { if (!silent) showToast('No Worker URL configured', true); return; }
+// ── SUPABASE INIT ──
+function initSupabase() {
   try {
-    // Ping the worker with a simple GET — our worker returns 404 for GET /
-    // but a successful response means CORS + connectivity is working
-    const res = await fetch(url + '/videos', { method: 'GET' });
-    if (res.ok || res.status === 404) {
-      setCFConnected(true);
-      if (!silent) showToast('Connected to Cloudflare Stream ✓');
+    STATE.sb = supabase.createClient(SB_URL, SB_KEY);
+    STATE.sb.auth.getUser().then(({ data }) => {
+      if (data?.user) setUser(data.user);
+    });
+    STATE.sb.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) setUser(session.user);
+      if (event === 'SIGNED_OUT') setUser(null);
+    });
+    console.log('✅ Supabase connected:', SB_URL);
+  } catch(e) {
+    console.error('Supabase init error:', e);
+  }
+}
+
+async function testSupabase() {
+  try {
+    const { data, error } = await STATE.sb.from('profiles').select('id').limit(1);
+    if (error) throw error;
+    showToast('Supabase connected! ✓', 'info');
+  } catch(e) {
+    // If table doesn't exist yet, connection is still working
+    if (e.message?.includes('relation') || e.code === 'PGRST200') {
+      showToast('Supabase connected! Run schema SQL to create tables.', 'info');
     } else {
-      throw new Error('HTTP ' + res.status);
+      showToast('Error: ' + e.message, true);
     }
-  } catch (e) {
-    setCFConnected(false);
-    if (!silent) showToast('Connection failed: ' + e.message, true);
   }
 }
 
-function setCFConnected(ok) {
-  state.cf.connected = ok;
-  // Update feed status bar
-  const dot  = document.getElementById('cf-dot');
-  const lbl  = document.getElementById('cf-label');
-  const menu = document.getElementById('cf-menu-status');
-  const adminSt = document.getElementById('admin-cf-status');
-  if (ok) {
-    dot.className = 'cf-dot';
-    lbl.textContent = 'Cloudflare Stream Connected';
-    if (menu) { menu.textContent = 'Connected'; menu.style.color = 'var(--green)'; }
-    if (adminSt) { adminSt.textContent = 'Connected · Worker Active'; adminSt.style.color = 'var(--green)'; }
-    document.getElementById('admin-video-count').textContent = '—';
-    document.getElementById('admin-storage').textContent = 'Live';
-  } else {
-    dot.className = 'cf-dot demo';
-    lbl.textContent = 'Demo Mode — Configure CF Stream';
-    if (menu) { menu.textContent = 'Not Connected'; menu.style.color = 'var(--muted)'; }
+// ── USER ──
+function setUser(user) {
+  STATE.user = user;
+  updateAuthUI();
+  restoreVoteUI();
+  if (user) {
+    const handle = user.user_metadata?.username || user.email?.split('@')[0] || 'vaaltalk';
+    document.getElementById('referral-link').textContent = `vaaltalk.app/join?ref=${handle}`;
+    document.getElementById('profile-name').textContent = user.user_metadata?.display_name || handle;
+    document.getElementById('profile-handle').textContent = '@' + handle;
   }
 }
 
-function openCFSettings() {
-  document.getElementById('cf-worker-url').value = state.cf.workerUrl;
-  document.getElementById('cf-account-id').value = state.cf.accountId;
-  openModal('cf-modal');
+function updateAuthUI() {
+  const prompt = document.getElementById('profile-auth-prompt');
+  const authed = document.getElementById('profile-authenticated');
+  const isAuth = !!STATE.user;
+  if (prompt) prompt.style.display = isAuth ? 'none' : 'block';
+  if (authed) authed.style.display = isAuth ? 'block' : 'none';
 }
 
-// ─────────────────────────────────────────────────────
-//  BUILD FEED (with CF Stream player or placeholder)
-// ─────────────────────────────────────────────────────
+// ── ENGAGEMENT VOTE ──
+async function castVote(vote) {
+  if (STATE.voteCast) { showToast('Already voted! Thanks 🙏', 'info'); return; }
+  if (!STATE.user) { showToast('Sign in to vote', true); openAuth(); return; }
+  try {
+    // Save to Supabase app_votes table (will fail gracefully if table not yet created)
+    if (STATE.sb) {
+      await STATE.sb.from('app_votes').insert({
+        user_id: STATE.user.id,
+        vote,
+        created_at: new Date().toISOString()
+      }).catch(()=>{});
+    }
+    STATE.voteCast = vote;
+    localStorage.setItem('vt_vote', vote);
+    restoreVoteUI();
+    showToast(vote === 'yes' ? '🙌 Thanks! Your vote keeps us going!' : 'Got it. We\'ll work to improve!');
+    // Send email notification via mailto (in production use server-side)
+    console.log('Vote cast:', vote, 'by', STATE.user?.email, '→ vaal.support@gmail.com');
+  } catch(e) {
+    STATE.voteCast = vote;
+    localStorage.setItem('vt_vote', vote);
+    restoreVoteUI();
+    showToast(vote === 'yes' ? '🙌 Thanks for your support!' : 'Thanks for your feedback!');
+  }
+}
+
+function restoreVoteUI() {
+  const v = STATE.voteCast;
+  if (!v) return;
+  const yBtn = document.getElementById('vote-yes');
+  const nBtn = document.getElementById('vote-no');
+  if (yBtn) yBtn.classList.toggle('voted', true);
+  if (nBtn) nBtn.classList.toggle('voted', true);
+}
+
+// ── AUTH ──
+let authMode = 'signin';
+function openAuth() { document.getElementById('auth-modal').classList.remove('hidden'); }
+function switchAuthTab(mode) {
+  authMode = mode;
+  document.getElementById('auth-tab-signin').classList.toggle('active', mode==='signin');
+  document.getElementById('auth-tab-signup').classList.toggle('active', mode==='signup');
+  document.getElementById('signup-extra').style.display = mode==='signup' ? 'block' : 'none';
+  document.getElementById('auth-submit-btn').textContent = mode==='signin' ? 'Sign In' : 'Create Account';
+  document.getElementById('auth-error').textContent = '';
+}
+
+async function handleAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pass  = document.getElementById('auth-password').value;
+  const errEl = document.getElementById('auth-error');
+  const btn   = document.getElementById('auth-submit-btn');
+  if (!email||!pass) { errEl.textContent='Please fill all fields'; return; }
+  btn.disabled=true; btn.textContent='Please wait...'; errEl.textContent='';
+  try {
+    let res;
+    if (authMode==='signin') {
+      res = await STATE.sb.auth.signInWithPassword({ email, password:pass });
+    } else {
+      const uname = document.getElementById('auth-username').value.trim() || email.split('@')[0];
+      res = await STATE.sb.auth.signUp({ email, password:pass, options:{data:{username:uname,display_name:uname}} });
+    }
+    if (res.error) { errEl.textContent = res.error.message; }
+    else {
+      closeModal('auth-modal');
+      showToast(authMode==='signin'?'Welcome back! 🔥':'Welcome to Vaal-Talk Beta! 🎉');
+    }
+  } catch(e) { errEl.textContent=e.message||'Something went wrong'; }
+  finally { btn.disabled=false; btn.textContent=authMode==='signin'?'Sign In':'Create Account'; }
+}
+
+async function signOut() {
+  if (STATE.sb) await STATE.sb.auth.signOut().catch(()=>{});
+  STATE.user=null; updateAuthUI();
+  showToast('Signed out. See you! 👋');
+}
+
+// ── SETTINGS ──
+function openSettings() {
+  document.getElementById('cf-worker-input').value=CFG.cfWorker;
+  document.getElementById('cf-account-input').value=CFG.cfAcct;
+  openModal('settings-modal');
+}
+function saveCF() {
+  CFG.cfWorker=document.getElementById('cf-worker-input').value.trim().replace(/\/$/,'');
+  CFG.cfAcct=document.getElementById('cf-account-input').value.trim();
+  localStorage.setItem('vt_cf_worker',CFG.cfWorker);
+  localStorage.setItem('vt_cf_acct',CFG.cfAcct);
+  showToast('CF Stream config saved!');
+  testCF(true);
+}
+async function testCF(silent=false) {
+  if (!CFG.cfWorker) { if(!silent) showToast('No Worker URL configured',true); return; }
+  try {
+    const res = await fetch(CFG.cfWorker+'/videos',{signal:AbortSignal.timeout(5000)});
+    STATE.cfConnected=res.ok||res.status===404;
+    if(!silent) showToast(STATE.cfConnected?'CF Stream connected! ✓':'CF connection issue',!STATE.cfConnected);
+  } catch { STATE.cfConnected=false; if(!silent) showToast('CF connection failed',true); }
+}
+
+// ── FEED ──
+const FEED_DATA = [
+  {user:'Lerato_Dlamini',loc:'Vereeniging',desc:'This braai hits different on a Sunday 🔥🥩 nothing like it in the Vaal',tags:['#VaalVibes','#Braai','#SundayMood'],likes:'142.4K',comments:'2.8K',shares:'18.2K',img:'https://picsum.photos/seed/vf1/400/700',uid:null,liked:false,following:false},
+  {user:'Sipho_Beats',loc:'Rust-Ter-Vaal',desc:'New amapiano beat just dropped 🎵✨ produced right here in the kasi',tags:['#Amapiano','#Kasi','#NewMusic'],likes:'89.1K',comments:'1.4K',shares:'42.7K',img:'https://picsum.photos/seed/vf2/400/700',uid:null,liked:true,following:true},
+  {user:'NomvulaTV',loc:'Meyerton',desc:'POV: Saturday at Meyerton mall with the squad 🛍️💅🏾',tags:['#MallVibes','#Squad'],likes:'54.8K',comments:'987',shares:'8.9K',img:'https://picsum.photos/seed/vf3/400/700',uid:null,liked:false,following:false},
+  {user:'Thabo_Nkosi',loc:'Vereeniging',desc:'Teaching my little bro how to drive 😂🚗 Vaal roads certified!',tags:['#Family','#Funny'],likes:'220.3K',comments:'4.2K',shares:'67.1K',img:'https://picsum.photos/seed/vf4/400/700',uid:null,liked:false,following:true},
+  {user:'Zinhle_Creates',loc:'Roshnee',desc:'Homemade fat cakes recipe that will change your life 🍩✨ Watch till end',tags:['#FatCakes','#KasiFood'],likes:'312.9K',comments:'6.7K',shares:'98.4K',img:'https://picsum.photos/seed/vf5/400/700',uid:null,liked:false,following:false},
+  {user:'VaalKid_Chris',loc:'De Deur',desc:'Sunrise from the Vaal Dam this morning 🌅 God is good 🙏🏾',tags:['#VaalDam','#Blessed'],likes:'78.6K',comments:'1.1K',shares:'22.3K',img:'https://picsum.photos/seed/vf6/400/700',uid:null,liked:true,following:false},
+];
+
 function buildFeed() {
   const wrap = document.getElementById('feed-wrap');
-  state.feedVideos.forEach((v, i) => {
+  FEED_DATA.forEach((v,i) => {
     const card = document.createElement('div');
-    card.className = 'video-card';
-    card.dataset.index = i;
-
-    // ── Video area: CF Stream player if uid exists, else placeholder ──
-    if (v.uid) {
-      // Real CF Stream player using the <stream> custom element
-      card.innerHTML = `
-        <stream class="stream-player"
-          src="${v.uid}"
-          autoplay muted loop playsinline
-          style="position:absolute;inset:0;width:100%;height:100%;border:none"
-        ></stream>
-        ${videoOverlay(v, i)}`;
-    } else {
-      // Demo placeholder with background image
-      card.innerHTML = `
-        <div class="video-placeholder">
-          <div class="video-placeholder-bg" style="background-image:url('${v.img}')"></div>
-          <div class="video-placeholder-content">
-            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-            <p>Video Player</p>
-            <small>Configure Cloudflare Stream<br/>to enable real video playback</small>
-            <div class="cf-badge" onclick="openCFSettings()">
-              ⚡ Setup CF Stream
-            </div>
-          </div>
+    card.className='video-card';
+    const overlay = `
+      <div class="vinfo">
+        <div class="vuser">
+          <div class="vavatar" style="background-image:url('https://picsum.photos/seed/vu${i}/100/100')"></div>
+          <span class="vname">${v.user}</span><span class="vloc">${v.loc}</span>
+          ${!v.following?`<span class="fchip" onclick="doFollow(${i},this)">+ Follow</span>`:''}
         </div>
-        <div class="vov"></div>
-        ${videoOverlay(v, i)}`;
-    }
+        <div class="vdesc">${v.desc}</div>
+        <div class="vtags">${v.tags.map(t=>`<span>${t}</span>`).join('')}</div>
+      </div>
+      <div class="vactions">
+        <div class="abtn ${v.liked?'liked':''}" id="lb${i}" onclick="doLike(${i},this)">
+          <svg viewBox="0 0 24 24" fill="${v.liked?'var(--red)':'none'}" stroke="${v.liked?'var(--red)':'#fff'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <span>${v.likes}</span>
+        </div>
+        <div class="abtn" onclick="openModal('comment-modal')"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>${v.comments}</span></div>
+        <div class="abtn" onclick="shareContent()"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span>${v.shares}</span></div>
+        <div class="abtn" onclick="showToast('Saved! 🎬')"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>Save</span></div>
+        <div class="abtn" onclick="showToast('Reported. Admin will review.')"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Report</span></div>
+      </div>`;
+    card.innerHTML = v.uid
+      ? `<stream src="${v.uid}" autoplay muted loop playsinline style="position:absolute;inset:0;width:100%;height:100%;border:none"></stream><div class="vov"></div>${overlay}`
+      : `<div class="vplaceholder"><div class="vpbg" style="background-image:url('${v.img}')"></div><div class="vpbody"><svg viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="1.5" width="46" height="46"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><p>Video Player</p><small>Configure CF Stream</small><div class="setup-chip" onclick="openSettings()">⚡ Setup</div></div></div><div class="vov"></div>${overlay}`;
     wrap.appendChild(card);
   });
-
-  // IntersectionObserver: auto-play/pause CF Stream players on scroll
-  setupVideoObserver();
-}
-
-function videoOverlay(v, i) {
-  return `
-    <div class="vinfo">
-      <div class="vuser">
-        <div class="vavatar" style="background-image:url('https://picsum.photos/seed/vu${i}/100/100')"></div>
-        <span class="vname">${v.user}</span>
-        <span class="vloc">${v.loc}</span>
-        ${!v.following ? `<span class="fchip" onclick="vF(${i},this)">+ Follow</span>` : ''}
-      </div>
-      <div class="vdesc">${v.desc}</div>
-      <div class="vtags">${v.tags.map(t => `<span>${t}</span>`).join('')}</div>
-    </div>
-    <div class="vactions">
-      <div class="abtn ${v.liked ? 'liked' : ''}" id="lb${i}" onclick="vL(${i},this)">
-        <svg viewBox="0 0 24 24" fill="${v.liked ? 'var(--red)' : 'none'}" stroke="${v.liked ? 'var(--red)' : '#fff'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-        <span>${v.likes}</span>
-      </div>
-      <div class="abtn" onclick="openModal('comment-modal')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        <span>${v.comments}</span>
-      </div>
-      <div class="abtn" onclick="showToast('Link copied!')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-        <span>${v.shares}</span>
-      </div>
-      <div class="abtn" onclick="showToast('Saved!')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-        <span>Save</span>
-      </div>
-      <div class="abtn" onclick="showToast('Reported. Admin will review.')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <span>Report</span>
-      </div>
-    </div>`;
-}
-
-// IntersectionObserver — pause/play CF Stream elements as cards scroll in/out
-function setupVideoObserver() {
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      const streamEl = entry.target.querySelector('stream');
-      if (!streamEl) return;
-      // Use CF Stream SDK to control playback
-      if (typeof Stream !== 'undefined') {
-        try {
-          const player = Stream(streamEl);
-          if (entry.isIntersecting) {
-            player.play().catch(() => {});
-          } else {
-            player.pause();
-          }
-        } catch(e) {}
-      }
+  new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const s=e.target.querySelector('stream');
+      if(!s)return;
+      try{const p=Stream(s);e.isIntersecting?p.play().catch(()=>{}):p.pause();}catch(e){}
     });
-  }, { threshold: 0.6 });
-
-  document.querySelectorAll('.video-card').forEach(card => observer.observe(card));
+  },{threshold:.6}).observe && document.querySelectorAll('.video-card').forEach(c=>new IntersectionObserver(entries=>{entries.forEach(e=>{const s=e.target.querySelector('stream');if(!s)return;try{if(typeof Stream!=='undefined'){const p=Stream(s);e.isIntersecting?p.play().catch(()=>{}):p.pause();}}catch(_){}});},{threshold:.6}).observe(c));
 }
 
-function vL(i, el) {
-  state.feedVideos[i].liked = !state.feedVideos[i].liked;
-  const s = el.querySelector('svg');
-  if (state.feedVideos[i].liked) {
-    el.classList.add('liked');
-    s.setAttribute('fill', 'var(--red)');
-    s.setAttribute('stroke', 'var(--red)');
-  } else {
-    el.classList.remove('liked');
-    s.setAttribute('fill', 'none');
-    s.setAttribute('stroke', '#fff');
-  }
-}
-function vF(i, el) { state.feedVideos[i].following = true; el.style.display = 'none'; showToast('Following ' + state.feedVideos[i].user + ' ✓'); }
+function doLike(i,el){FEED_DATA[i].liked=!FEED_DATA[i].liked;const s=el.querySelector('svg');if(FEED_DATA[i].liked){el.classList.add('liked');s.setAttribute('fill','var(--red)');s.setAttribute('stroke','var(--red)');}else{el.classList.remove('liked');s.setAttribute('fill','none');s.setAttribute('stroke','#fff');}}
+function doFollow(i,el){FEED_DATA[i].following=true;el.style.display='none';showToast('Following '+FEED_DATA[i].user+' ✓');}
 
-// ─────────────────────────────────────────────────────
-//  TUS UPLOAD via CF Worker
-// ─────────────────────────────────────────────────────
-function onFileSelected(input) {
-  const file = input.files[0];
-  if (!file) return;
-  state.uploadFile = file;
-
-  // Check CF connected
-  const warn = document.getElementById('cf-upload-warn');
-  const btn  = document.getElementById('upload-submit-btn');
-  if (!state.cf.workerUrl) {
-    warn.style.display = 'block';
-    btn.disabled = true;
-    btn.textContent = 'Configure CF Stream first';
-    return;
-  }
-
-  warn.style.display = 'none';
-  btn.disabled = false;
-  btn.textContent = `Upload: ${file.name}`;
-  setStage(1);
-
-  // Show dropzone feedback
-  const dz = document.getElementById('dropzone');
-  dz.querySelector('p').textContent = '✓ ' + file.name;
-  dz.querySelector('small').textContent = formatBytes(file.size) + ' · Ready to upload';
+function switchFeedTab(tab) {
+  document.querySelectorAll('.topbar-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('ttab-'+tab)?.classList.add('active');
+  showToast(tab==='kasies'?'Kasie feed coming soon!':tab==='following'?'Following feed coming soon!':'');
 }
 
-async function startUpload() {
-  const file = state.uploadFile;
-  if (!file) { showToast('Select a video first', true); return; }
-  if (!state.cf.workerUrl) { showToast('Configure Cloudflare Stream first', true); return; }
+// ── SHARE / INVITE ──
+function shareContent() {
+  const data = { title:'Vaal-Talk Beta', text:'Check this out on Vaal-Talk Beta! 🔥', url:'https://vaaltalk.app' };
+  if (navigator.share) { navigator.share(data).catch(()=>{}); }
+  else { navigator.clipboard?.writeText(data.url).then(()=>showToast('Link copied!')); }
+}
 
-  const btn = document.getElementById('upload-submit-btn');
-  btn.disabled = true;
-  btn.textContent = 'Uploading...';
+function openInvite() { openModal('invite-modal'); }
 
-  setStage(2);
-  showProgress(true);
-  setProgressStatus('Requesting upload URL from Cloudflare...');
+function buildInvitePlatforms() {
+  const ref = STATE.user ? (STATE.user.user_metadata?.username || STATE.user.email?.split('@')[0] || 'user') : 'user';
+  const link = `https://vaaltalk.app/join?ref=${ref}`;
+  const msg  = encodeURIComponent(`Join me on Vaal-Talk Beta — the social app for the Vaal Region! 🔥 ${link}`);
+  const platforms = [
+    { name:'WhatsApp', color:'#25D366', url:`https://wa.me/?text=${msg}`, icon:`<svg viewBox="0 0 24 24" width="16" height="16" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>` },
+    { name:'Facebook', color:'#1877F2', url:`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`, icon:`<svg viewBox="0 0 24 24" width="16" height="16" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>` },
+    { name:'X (Twitter)', color:'#fff', url:`https://twitter.com/intent/tweet?text=${msg}`, icon:`<svg viewBox="0 0 24 24" width="16" height="16" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>` },
+    { name:'Messenger', color:'#0084FF', url:`https://www.facebook.com/dialog/send?link=${encodeURIComponent(link)}&app_id=000000`, icon:`<svg viewBox="0 0 24 24" width="16" height="16" fill="#0084FF"><path d="M12 0C5.373 0 0 4.975 0 11.111c0 3.497 1.745 6.616 4.472 8.652V24l4.086-2.242c1.09.301 2.246.464 3.442.464 6.627 0 12-4.975 12-11.111C24 4.975 18.627 0 12 0zm1.193 14.963l-3.056-3.259-5.963 3.259 6.559-6.963 3.13 3.259 5.889-3.259-6.559 6.963z"/></svg>` },
+    { name:'Copy Link', color:'var(--brand)', url:null, icon:`<svg viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" width="16" height="16"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>` },
+    { name:'Native Share', color:'var(--muted2)', url:null, icon:`<svg viewBox="0 0 24 24" fill="none" stroke="var(--muted2)" stroke-width="2" width="16" height="16"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>` },
+  ];
+  const grid = document.getElementById('invite-grid');
+  if (!grid) return;
+  grid.innerHTML = platforms.map(p=>`
+    <button class="inv-btn" onclick="invitePlatform('${p.url||''}','${p.name}','${link}')" style="justify-content:flex-start">
+      ${p.icon}<span>${p.name}</span>
+    </button>`).join('');
+  // Also update profile invite platforms
+  const invPlatforms = document.getElementById('invite-platforms');
+  if (invPlatforms) invPlatforms.innerHTML = platforms.slice(0,4).map(p=>`<button class="inv-btn" onclick="invitePlatform('${p.url||''}','${p.name}','${link}')">${p.icon} ${p.name}</button>`).join('');
+}
 
+function invitePlatform(url, name, link) {
+  if (name==='Copy Link') { navigator.clipboard?.writeText(link).then(()=>showToast('Link copied! 🔗')); return; }
+  if (name==='Native Share') { const d={title:'Vaal-Talk Beta',text:'Join the Vaal community! 🔥',url:link}; navigator.share?navigator.share(d).catch(()=>{}):navigator.clipboard?.writeText(link).then(()=>showToast('Link copied!')); return; }
+  if (url) window.open(url,'_blank','noopener');
+}
+
+// ── JOBS ──
+const JOB_CATS = ['All','Cleaning','Garden','Security','Delivery','Repairs','Catering','Tutoring','IT','Construction','Healthcare','Other'];
+const JOBS_DATA = [
+  {id:1,title:'Garden Maintenance Needed — Weekly',company:'Private Household',type:'once-off',pay:'R400/visit',loc:'Vereeniging',contact:'068 965 7528',desc:'Need someone to cut grass, trim hedges and rake leaves. Every Saturday.',tags:['garden','weekend'],featured:true,urgent:false,remote:false,img:''},
+  {id:2,title:'Security Guard — Night Shift',company:'VaalGuard Security',type:'full-time',pay:'R6,500/month',loc:'Vanderbijlpark',contact:'011 000 0000',desc:'Licensed security guard needed for industrial site. Night shift 18:00-06:00.',tags:['security','licensed'],featured:false,urgent:true,remote:false,img:''},
+  {id:3,title:'WhatsApp Marketing Coordinator',company:'Kasi Flavours',type:'part-time',pay:'R3,000/month',loc:'Meyerton',contact:'068 965 7528',desc:'Manage social media and WhatsApp marketing for local food brand.',tags:['social-media','marketing'],featured:false,urgent:false,remote:true,img:''},
+  {id:4,title:'Plumber — Geyser Installation',company:'Homefix Vaal',type:'once-off',pay:'R1,200 flat',loc:'Roshnee',contact:'082 000 0000',desc:'Experienced plumber needed urgently for geyser replacement.',tags:['plumbing','urgent'],featured:false,urgent:true,remote:false,img:''},
+  {id:5,title:'Grade 12 Maths Tutor',company:'Private',type:'part-time',pay:'R150/hour',loc:'Rust-Ter-Vaal',contact:'072 000 0000',desc:'Looking for qualified maths tutor for Grade 12 learner. 3x per week.',tags:['tutoring','education'],featured:false,urgent:false,remote:false,img:''},
+  {id:6,title:'Catering Assistant — Events',company:'Thandi\'s Catering',type:'once-off',pay:'R500/event',loc:'De Deur',contact:'063 000 0000',desc:'Help needed for weekend catering events. Must have own transport.',tags:['catering','events'],featured:true,urgent:false,remote:false,img:''},
+];
+
+function buildJobCats() {
+  const el = document.getElementById('job-cats');
+  JOB_CATS.forEach((cat,i)=>{
+    const d=document.createElement('div');
+    d.className='job-cat'+(i===0?' active':'');
+    d.textContent=cat;
+    d.onclick=()=>{document.querySelectorAll('.job-cat').forEach(c=>c.classList.remove('active'));d.classList.add('active');filterJobs(cat);};
+    el.appendChild(d);
+  });
+}
+
+function buildJobs(jobs=JOBS_DATA) {
+  const el=document.getElementById('jobs-list');
+  el.innerHTML='';
+  jobs.forEach(job=>{
+    const d=document.createElement('div');
+    d.className='job-card'+(job.featured?' featured':'');
+    d.innerHTML=`
+      <div class="job-card-top">
+        <div class="job-avatar">${job.title.charAt(0)}</div>
+        <div class="job-info">
+          <div class="job-title">${job.title}</div>
+          <div class="job-company">${job.company}</div>
+          <div class="job-tags">
+            <span class="job-tag">${job.type}</span>
+            ${job.remote?'<span class="job-tag remote">Remote</span>':''}
+            ${job.urgent?'<span class="job-tag urgent">Urgent</span>':''}
+            ${job.featured?'<span class="job-tag" style="background:rgba(0,229,255,.1);color:var(--brand);border-color:rgba(0,229,255,.2)">Featured</span>':''}
+          </div>
+        </div>
+      </div>
+      <div class="job-card-footer">
+        <div class="job-pay">${job.pay}</div>
+        <div class="job-loc"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${job.loc}</div>
+        <button class="job-apply-btn" onclick="applyJob(${job.id},'${job.contact}')">Apply</button>
+      </div>`;
+    d.onclick=()=>openJobDetail(job);
+    el.appendChild(d);
+  });
+}
+
+function filterJobs(cat) {
+  if(cat==='All'){buildJobs();return;}
+  const filtered=JOBS_DATA.filter(j=>j.tags.some(t=>t.toLowerCase().includes(cat.toLowerCase()))||j.title.toLowerCase().includes(cat.toLowerCase())||j.type===cat.toLowerCase());
+  buildJobs(filtered.length?filtered:JOBS_DATA);
+}
+
+function applyJob(id, contact) {
+  const job=JOBS_DATA.find(j=>j.id===id);
+  const msg=encodeURIComponent(`Hi! I saw your job listing "${job?.title}" on Vaal-Talk Beta and would like to apply. 🙏`);
+  const phone=contact.replace(/\s/g,'').replace(/^\+/,'');
+  window.open(`https://wa.me/${phone}?text=${msg}`,'_blank');
+}
+
+function openJobDetail(job) {
+  showToast(`${job.title} — Tap Apply to contact`);
+}
+
+let selectedJobType='full-time';
+function selectJobType(el) {
+  document.querySelectorAll('.jtype-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  selectedJobType=el.dataset.type;
+}
+
+async function submitJob() {
+  const title   = document.getElementById('job-title-input').value.trim();
+  const desc    = document.getElementById('job-desc-input').value.trim();
+  const pay     = document.getElementById('job-pay-input').value.trim();
+  const loc     = document.getElementById('job-location-input').value;
+  const contact = document.getElementById('job-contact-input').value.trim();
+  if(!title||!pay||!contact){showToast('Please fill in all required fields',true);return;}
+  if(!STATE.user){showToast('Sign in to post a job',true);openAuth();return;}
   try {
-    // ── Step 1: Get one-time upload URL from our CF Worker ──
-    const urlRes = await fetch(state.cf.workerUrl + '/upload-url', {
-      method: 'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Upload-Length': String(file.size),
-        'Upload-Creator': 'thabo_vaal', // In production: real user ID
-      },
-      body: JSON.stringify({
-        fileSize: file.size,
-        fileName: file.name,
-        creator:  'thabo_vaal',
-      }),
-    });
-
-    if (!urlRes.ok) throw new Error('Worker returned ' + urlRes.status);
-    const { uploadUrl, videoUid } = await urlRes.json();
-
-    if (!uploadUrl) throw new Error('No upload URL received from Worker');
-
-    state.uploadUid = videoUid;
-    setProgressStatus('Starting TUS resumable upload...');
-
-    // ── Step 2: TUS upload directly to Cloudflare Stream ──
-    const upload = new tus.Upload(file, {
-      uploadUrl: uploadUrl,   // Direct to CF Stream — no auth needed
-      retryDelays: [0, 3000, 5000, 10000, 20000],
-      chunkSize: 52428800,    // 50MB chunks (CF minimum is 5MB)
-      metadata: {
-        name:     file.name,
-        filetype: file.type,
-      },
-      onError: (error) => {
-        console.error('TUS upload error:', error);
-        setProgressStatus('Upload failed: ' + error.message, 'err');
-        btn.disabled = false;
-        btn.textContent = 'Retry Upload';
-        showToast('Upload failed', true);
-      },
-      onProgress: (bytesUploaded, bytesTotal) => {
-        const pct = Math.round((bytesUploaded / bytesTotal) * 100);
-        document.getElementById('progress-bar').style.width = pct + '%';
-        document.getElementById('progress-pct').textContent = pct + '%';
-        document.getElementById('progress-filename').textContent = file.name;
-        setProgressStatus(`Uploading to Cloudflare Stream… ${formatBytes(bytesUploaded)} / ${formatBytes(bytesTotal)}`);
-      },
-      onSuccess: () => {
-        onUploadComplete(videoUid, file.name);
-      },
-    });
-
-    state.tusUpload = upload;
-    upload.start();
-
-  } catch (err) {
-    console.error('Upload setup error:', err);
-    setProgressStatus('Error: ' + err.message, 'err');
-    btn.disabled = false;
-    btn.textContent = 'Retry Upload';
-    showToast('Upload error: ' + err.message, true);
-  }
-}
-
-function onUploadComplete(videoUid, fileName) {
-  setStage(3);
-  document.getElementById('progress-bar').style.width = '100%';
-  document.getElementById('progress-pct').textContent = '100%';
-  setProgressStatus('Upload complete! Processing on Cloudflare...', 'done');
-
-  const caption   = document.getElementById('upload-caption').value || 'New video from Vaal Talk';
-  const community = document.getElementById('upload-community').value;
-  const tags      = document.getElementById('upload-tags').value.split(' ').filter(Boolean);
-
-  // Poll for readyToStream, then add to feed
-  pollVideoReady(videoUid, () => {
-    // Add new video to top of feed
-    const newVideo = {
-      user:      'Thabo_Nkosi',
-      loc:       community,
-      desc:      caption,
-      tags:      tags.length ? tags : ['#VaalTalk'],
-      likes:     '0',
-      comments:  '0',
-      shares:    '0',
-      img:       '',
-      uid:       videoUid,   // Real CF Stream UID
-      liked:     false,
-      following: false,
-    };
-    state.feedVideos.unshift(newVideo);
-
-    showToast('Video live on Vaal Talk! 🔥');
-    closeModal('upload-modal');
-    resetUploadForm();
-
-    // Rebuild feed so new video appears
-    const wrap = document.getElementById('feed-wrap');
-    wrap.innerHTML = '';
-    buildFeed();
-    navTo('feed');
-  });
-}
-
-async function pollVideoReady(uid, onReady) {
-  setProgressStatus('Waiting for Cloudflare to process video...', '');
-  let attempts = 0;
-  const maxAttempts = 30; // 30 × 3s = 90s max
-
-  const poll = async () => {
-    if (attempts++ > maxAttempts) {
-      showToast('Video uploaded! May take a moment to appear.');
-      onReady();
-      return;
+    if (STATE.sb) {
+      await STATE.sb.from('jobs').insert({ title, description:desc, pay, location:loc, contact, type:selectedJobType, user_id:STATE.user.id, created_at:new Date().toISOString() }).catch(()=>{});
     }
-    try {
-      const res = await fetch(state.cf.workerUrl + '/video/' + uid);
-      const data = await res.json();
-      if (data.readyToStream) {
-        onReady();
-      } else {
-        setProgressStatus(`Processing video... (${attempts}/${maxAttempts})`, '');
-        setTimeout(poll, 3000);
-      }
-    } catch (e) {
-      // If polling fails, still add to feed
-      onReady();
-    }
-  };
-  poll();
+    // Add to local list
+    JOBS_DATA.unshift({id:Date.now(),title,company:STATE.user.email?.split('@')[0]||'Anonymous',type:selectedJobType,pay,loc,contact,desc,tags:[selectedJobType],featured:false,urgent:false,remote:selectedJobType==='remote'});
+    buildJobs();
+    closeModal('post-job-modal');
+    ['job-title-input','job-desc-input','job-pay-input','job-contact-input'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    showToast('Job posted! 🎉 People in the Vaal will see it now.');
+  } catch(e) { showToast('Job posted locally! Connect Supabase to persist.'); closeModal('post-job-modal'); }
 }
 
-// ── Upload UI helpers ──
-function setStage(n) {
-  [1,2,3].forEach(i => {
-    const el = document.getElementById('stage-' + i);
-    if (!el) return;
-    el.className = 'ustage' + (i < n ? ' done' : i === n ? ' active' : '');
-  });
-}
-function showProgress(show) {
-  document.getElementById('upload-progress').classList.toggle('show', show);
-  document.getElementById('dropzone').style.display = show ? 'none' : 'block';
-}
-function setProgressStatus(msg, type = '') {
-  const el = document.getElementById('progress-status');
-  el.textContent = msg;
-  el.className = 'progress-status' + (type ? ' ' + type : '');
-}
-function resetUploadForm() {
-  state.uploadFile = null;
-  state.uploadUid = null;
-  state.tusUpload = null;
-  document.getElementById('upload-caption').value = '';
-  document.getElementById('upload-tags').value = '';
-  const dz = document.getElementById('dropzone');
-  dz.querySelector('p').textContent = 'Tap to select video';
-  dz.querySelector('small').textContent = 'MP4 · MOV · Up to 100MB · Max 3 mins';
-  showProgress(false);
-  setStage(1);
-  const btn = document.getElementById('upload-submit-btn');
-  btn.disabled = true;
-  btn.textContent = 'Select a video first';
-}
-function formatBytes(b) {
-  if (b < 1024) return b + 'B';
-  if (b < 1048576) return (b/1024).toFixed(1) + 'KB';
-  return (b/1048576).toFixed(1) + 'MB';
-}
-function openUpload() {
-  resetUploadForm();
-  // Show warning if CF not configured
-  const warn = document.getElementById('cf-upload-warn');
-  warn.style.display = state.cf.workerUrl ? 'none' : 'block';
-  openModal('upload-modal');
-}
-
-// ─────────────────────────────────────────────────────
-//  DISCOVER
-// ─────────────────────────────────────────────────────
-const TRENDS=[
-  {tag:'#VaalVibes',count:'1.2M videos',img:'https://picsum.photos/seed/tr1/100/100'},
-  {tag:'#Amapiano',count:'4.7M videos',img:'https://picsum.photos/seed/tr2/100/100'},
-  {tag:'#KasiFood',count:'891K videos',img:'https://picsum.photos/seed/tr3/100/100'},
-  {tag:'#VaalDam',count:'334K videos',img:'https://picsum.photos/seed/tr4/100/100'},
-];
-const CREATORS=[
-  {name:'Lerato Dlamini',followers:'142K',img:'https://picsum.photos/seed/cr1/200/200',banner:'https://picsum.photos/seed/bn1/300/150',following:false},
-  {name:'Sipho Beats',followers:'89.1K',img:'https://picsum.photos/seed/cr2/200/200',banner:'https://picsum.photos/seed/bn2/300/150',following:true},
-  {name:'Nomvula TV',followers:'54.8K',img:'https://picsum.photos/seed/cr3/200/200',banner:'https://picsum.photos/seed/bn3/300/150',following:false},
-  {name:'Zinhle Creates',followers:'312K',img:'https://picsum.photos/seed/cr4/200/200',banner:'https://picsum.photos/seed/bn4/300/150',following:false},
-];
-function buildDiscover(){
-  const tl=document.getElementById('trend-list');
-  TRENDS.forEach((t,i)=>{const d=document.createElement('div');d.className='trend-item';d.innerHTML=`<div class="trend-rank ${i<3?'top':''}">${String(i+1).padStart(2,'0')}</div><div style="flex:1"><div class="trend-tag">${t.tag}</div><div class="trend-count">${t.count}</div></div><div class="trend-thumb" style="background-image:url('${t.img}')"></div>`;d.onclick=()=>showToast('Exploring '+t.tag+'...');tl.appendChild(d);});
-  const cg=document.getElementById('creator-grid');
-  CREATORS.forEach((c,i)=>{const d=document.createElement('div');d.className='creator-card';d.innerHTML=`<div class="creator-banner" style="background-image:url('${c.banner}')"></div><div class="creator-body"><div class="creator-av" style="background-image:url('${c.img}')"></div><div class="creator-name">${c.name}</div><div class="creator-stats">${c.followers} followers</div><button class="follow-btn ${c.following?'following':''}" id="cfb${i}" onclick="cF(${i})">${c.following?'Following':'Follow'}</button></div>`;cg.appendChild(d);});
-}
-function cF(i){CREATORS[i].following=!CREATORS[i].following;const b=document.getElementById('cfb'+i);b.className='follow-btn'+(CREATORS[i].following?' following':'');b.textContent=CREATORS[i].following?'Following':'Follow';showToast(CREATORS[i].following?'Following '+CREATORS[i].name+' ✓':'Unfollowed '+CREATORS[i].name);}
-
-// ─────────────────────────────────────────────────────
-//  MARKETPLACE
-// ─────────────────────────────────────────────────────
+// ── MARKETPLACE ──
 const MKT=[
   {title:'iPhone 13 Pro',price:'R 8,500',seller:'Sipho · Vereeniging',badge:'hot',img:'https://picsum.photos/seed/p1/300/300'},
   {title:'Couch Set (3+2)',price:'R 3,200',seller:'Nomvula · Meyerton',badge:'new',img:'https://picsum.photos/seed/p2/300/300'},
@@ -1104,18 +1287,11 @@ function buildMarket(){
   const g=document.getElementById('mkt-grid');
   MKT.forEach(item=>{const d=document.createElement('div');d.className='mkt-card';d.innerHTML=`<div class="mkt-img" style="background-image:url('${item.img}')">${item.badge?`<div class="mkt-badge ${item.badge}">${item.badge.toUpperCase()}</div>`:''}</div><div class="mkt-body"><div class="mkt-title">${item.title}</div><div class="mkt-price">${item.price}</div><div class="mkt-seller">${item.seller}</div></div>`;d.onclick=()=>showToast('Opening '+item.title+'...');g.appendChild(d);});
   const ml=document.getElementById('mall-list');
-  MALL.forEach(s=>{const d=document.createElement('div');d.className='mall-card';d.innerHTML=`<div class="mall-logo">${s.init}</div><div class="mall-info"><div class="mall-name">${s.name}${s.gold?'<span class="gbadge">GOLD</span>':''}</div><div class="mall-cat">${s.cat}</div><div class="mall-rating"><svg viewBox="0 0 24 24" width="12" height="12"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>${s.rating} · ${s.reviews} reviews</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:10px;font-weight:700;color:${s.open?'var(--green)':'var(--red)'}">${s.open?'Open':'Closed'}</div></div>`;d.onclick=()=>showToast('Opening '+s.name+'...');ml.appendChild(d);});
+  MALL.forEach(s=>{const d=document.createElement('div');d.className='mall-card';d.innerHTML=`<div class="mall-logo">${s.init}</div><div class="mall-info"><div class="mall-name">${s.name}${s.gold?'<span class="gbadge">GOLD</span>':''}</div><div class="mall-cat">${s.cat}</div><div class="mall-rating"><svg viewBox="0 0 24 24" width="10" height="10"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>${s.rating}</div></div><div style="font-size:9px;font-weight:700;color:${s.open?'var(--green)':'var(--red)'};flex-shrink:0">${s.open?'Open':'Closed'}</div>`;d.onclick=()=>showToast('Opening '+s.name+'...');ml.appendChild(d);});
 }
-function switchMkt(tab){
-  document.getElementById('mtab-sell').classList.toggle('active',tab==='sell');
-  document.getElementById('mtab-mall').classList.toggle('active',tab==='mall');
-  document.getElementById('mkt-sell').style.display=tab==='sell'?'block':'none';
-  document.getElementById('mkt-mall').style.display=tab==='mall'?'block':'none';
-}
+function switchMkt(tab){['sell','mall'].forEach(t=>{document.getElementById('mtab-'+t).classList.toggle('active',t===tab);document.getElementById('mkt-'+t).style.display=t===tab?'block':'none';});}
 
-// ─────────────────────────────────────────────────────
-//  COMMUNITIES
-// ─────────────────────────────────────────────────────
+// ── COMMUNITIES ──
 const KASIES=[
   {name:'Vereeniging',members:14872,max:15000,joined:true,unlocked:true},
   {name:'Rust-Ter-Vaal',members:8241,max:10000,joined:false,unlocked:true},
@@ -1124,93 +1300,112 @@ const KASIES=[
   {name:'De Deur',members:2156,max:5000,joined:false,unlocked:false},
   {name:'Bophelong',members:312,max:500,joined:false,unlocked:false},
 ];
-const CHAT=[
+const CHAT_DEMO=[
   {user:'Sipho_B',text:"Yooo check the load-shedding schedule for tomorrow",time:'10:02',mine:false,img:'https://picsum.photos/seed/ch1/100/100'},
-  {user:'Lerato_D',text:"Stage 4 again 😭 I'm so tired man",time:'10:03',mine:false,img:'https://picsum.photos/seed/ch2/100/100'},
-  {user:'You',text:'The generator at the community hall will be running. Come through for the meeting!',time:'10:05',mine:true},
+  {user:'Lerato_D',text:"Stage 4 again 😭 I'm so tired",time:'10:03',mine:false,img:'https://picsum.photos/seed/ch2/100/100'},
+  {user:'You',text:'Generator at community hall will be running! Come through for the meeting',time:'10:05',mine:true},
   {user:'NomvulaTV',text:'What time is the town hall meeting?',time:'10:07',mine:false,img:'https://picsum.photos/seed/ch3/100/100'},
-  {user:'You',text:'6pm sharp. Live stream also on Vaal Talk tonight 🔴',time:'10:08',mine:true},
-  {user:'VaalAdmin',text:'📢 Reminder: Community meeting tonight. All members welcome!',time:'10:10',mine:false,img:'https://picsum.photos/seed/ch4/100/100'},
+  {user:'You',text:'6pm sharp. Live stream also on Vaal-Talk Beta tonight 🔴',time:'10:08',mine:true},
 ];
 function buildKasies(){
   const g=document.getElementById('kasie-grid');
-  KASIES.forEach(k=>{const pct=Math.round((k.members/k.max)*100);const d=document.createElement('div');d.className='kasie-card'+(k.joined?' joined':'');d.innerHTML=`<div class="kasie-name">${k.name}</div><div class="kasie-members">${k.members.toLocaleString()} members</div>${!k.unlocked?`<div class="kasie-prog"><div class="kasie-progbar" style="width:${pct}%"></div></div>`:''}<div class="kasie-chat ${k.unlocked?'on':'off'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="9" height="9"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>${k.unlocked?'Chat Active':pct+'% to chat'}</div>`;d.onclick=()=>openKasieChat(k);g.appendChild(d);});
+  KASIES.forEach(k=>{const pct=Math.round((k.members/k.max)*100);const d=document.createElement('div');d.className='kasie-card'+(k.joined?' joined':'');d.innerHTML=`<div class="kasie-name">${k.name}</div><div class="kasie-members">${k.members.toLocaleString()} members</div>${!k.unlocked?`<div class="kasie-prog"><div class="kasie-progbar" style="width:${pct}%"></div></div>`:''}<div class="kasie-chat ${k.unlocked?'on':'off'}">${k.unlocked?'● Chat Active':pct+'% to chat'}</div>`;d.onclick=()=>openKasieChat(k);g.appendChild(d);});
 }
 function openKasieChat(k){
-  if(!k.unlocked){showToast(k.name+' needs '+k.max.toLocaleString()+' members for chat');return}
+  if(!k.joined){showToast('Join '+k.name+' first to access community');return;}
+  if(!k.unlocked){showToast(k.name+' needs '+k.max.toLocaleString()+' members for chat');return;}
   document.getElementById('kasie-main').style.display='none';
   const cv=document.getElementById('kasie-chat-view');cv.style.display='block';
-  cv.innerHTML=`<div class="chat-wrap"><div class="chat-hd"><div class="chat-back" onclick="closeKasieChat()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="17" height="17"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></div><div style="flex:1"><div style="font-weight:800;font-size:15px">${k.name} Community</div><div style="font-size:11px;color:var(--green)">● ${k.members.toLocaleString()} members</div></div></div><div class="chat-msgs" id="cmsgs">${CHAT.map(m=>`<div class="msg-row ${m.mine?'mine':''}">${!m.mine?`<div class="mavatar" style="background-image:url('${m.img}')"></div>`:''}<div>${!m.mine?`<div class="mname">${m.user}</div>`:''}<div class="mbubble">${m.text}</div><div class="mtime">${m.time}</div></div></div>`).join('')}</div><div class="chat-input-bar"><input class="cinput-msg" id="cinp" placeholder="Message ${k.name}..." onkeypress="if(event.key==='Enter')sendChat()"/><button class="csend" onclick="sendChat()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div></div>`;
+  cv.innerHTML=`<div class="chat-wrap"><div class="chat-hd"><div class="chat-back" onclick="closeKasieChat()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="16" height="16"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></div><div style="flex:1"><div style="font-weight:800;font-size:14px">${k.name} Community</div><div style="font-size:10px;color:var(--green)">● ${k.members.toLocaleString()} members</div></div><svg viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></div><div class="chat-msgs" id="cmsgs">${CHAT_DEMO.map(m=>`<div class="msg-row ${m.mine?'mine':''}">${!m.mine?`<div class="mavatar" style="background-image:url('${m.img}')"></div>`:''}<div>${!m.mine?`<div class="mname">${m.user}</div>`:''}<div class="mbubble">${m.text}</div><div class="mtime">${m.time}</div></div></div>`).join('')}</div><div class="chat-input-bar"><input class="cinput-msg" id="cinp" placeholder="Message ${k.name}..." onkeypress="if(event.key==='Enter')sendChat()"/><button class="csend" onclick="sendChat()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div></div>`;
   setTimeout(()=>{const m=document.getElementById('cmsgs');if(m)m.scrollTop=m.scrollHeight;},80);
 }
 function closeKasieChat(){document.getElementById('kasie-main').style.display='block';const cv=document.getElementById('kasie-chat-view');cv.style.display='none';cv.innerHTML='';}
 function sendChat(){const i=document.getElementById('cinp');const t=i.value.trim();if(!t)return;const m=document.getElementById('cmsgs');const d=document.createElement('div');d.className='msg-row mine';d.innerHTML=`<div><div class="mbubble">${t}</div><div class="mtime">now</div></div>`;m.appendChild(d);i.value='';m.scrollTop=m.scrollHeight;}
 
-// ─────────────────────────────────────────────────────
-//  PROFILE & COMMENTS
-// ─────────────────────────────────────────────────────
-function buildProfile(){const g=document.getElementById('prof-grid');for(let i=0;i<12;i++){const d=document.createElement('div');d.className='prof-post';d.style.backgroundImage=`url('https://picsum.photos/seed/pp${i+10}/300/300')`;d.innerHTML=`<div class="post-ov"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" width="22" height="22"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>`;g.appendChild(d);}}
-const COMMENTS=[
-  {user:'Sipho_B',text:'Bro this is too fire 🔥🔥',time:'2m ago',img:'https://picsum.photos/seed/cm1/100/100'},
-  {user:'Lerato_D',text:'Eish wena, you always coming through!',time:'5m ago',img:'https://picsum.photos/seed/cm2/100/100'},
-  {user:'NomvulaTV',text:'From Meyerton with love 💛 keep going!',time:'12m ago',img:'https://picsum.photos/seed/cm3/100/100'},
-  {user:'VaalKid',text:'Yasss rep!! The Vaal is the place 🙌🏾',time:'18m ago',img:'https://picsum.photos/seed/cm4/100/100'},
-];
-function buildComments(){const l=document.getElementById('comments-list');COMMENTS.forEach(c=>{const d=document.createElement('div');d.className='comment-item';d.innerHTML=`<div class="cav" style="background-image:url('${c.img}')"></div><div><div class="cuser">${c.user}</div><div class="ctext">${c.text}</div><div class="ctime">${c.time}</div></div>`;l.appendChild(d);});}
+// ── PROFILE ──
+function buildProfile(){const g=document.getElementById('prof-grid');if(!g)return;for(let i=0;i<12;i++){const d=document.createElement('div');d.className='prof-post';d.style.backgroundImage=`url('https://picsum.photos/seed/pp${i+10}/300/300')`;d.innerHTML=`<div class="post-ov"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" width="20" height="20"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>`;g.appendChild(d);}}
 
-// ─────────────────────────────────────────────────────
-//  ADMIN REPORTS
-// ─────────────────────────────────────────────────────
-const REPORTS=[
-  {type:'violence',label:'Violence',desc:'Video showing a fight outside a store in Vereeniging. 7 reports received.'},
-  {type:'spam',label:'Spam',desc:'User reposting same listing 12 times in Kasi Sell. 5 community reports.'},
-  {type:'explicit',label:'AI Flagged',desc:'Thumbnail flagged by AI moderation (85% nudity confidence). 3 reports.'},
+// ── NOTIFICATIONS ──
+const NOTIFS=[
+  {icon:'🔥',text:'<strong>Sipho_Beats</strong> just dropped a new video in <strong>Rust-Ter-Vaal</strong>',time:'2m ago',unread:true},
+  {icon:'❤️',text:'<strong>Lerato_D</strong> liked your video',time:'15m ago',unread:true},
+  {icon:'💬',text:'<strong>NomvulaTV</strong> replied to your comment: "Eish this is fire 🔥"',time:'34m ago',unread:true},
+  {icon:'🛍',text:'New listing in Kasi Sell near you: <strong>iPhone 13 Pro — R8,500</strong>',time:'1h ago',unread:false},
+  {icon:'🏘',text:'<strong>Vereeniging</strong> community meeting scheduled for tonight at 6pm',time:'2h ago',unread:false},
+  {icon:'💼',text:'New job posted near you: <strong>Garden Maintenance — Vereeniging</strong>',time:'3h ago',unread:false},
+  {icon:'👥',text:'<strong>Thabo_Nkosi</strong> started following you',time:'5h ago',unread:false},
 ];
-function buildReports(){const l=document.getElementById('reports-list');REPORTS.forEach(r=>{const d=document.createElement('div');d.className='report-item';d.innerHTML=`<div><span class="rbadge ${r.type}">${r.label}</span></div><div class="rdesc">${r.desc}</div><div class="rbtns"><button class="rbtn del" onclick="showToast('Content removed');this.closest('.report-item').remove()">Remove</button><button class="rbtn ban" onclick="showToast('User banned');this.closest('.report-item').remove()">Ban User</button><button class="rbtn dim" onclick="showToast('Dismissed');this.closest('.report-item').remove()">Dismiss</button></div>`;l.appendChild(d);});}
+function buildNotifications(){
+  const el=document.getElementById('notif-list');
+  NOTIFS.forEach(n=>{const d=document.createElement('div');d.className='notif-item'+(n.unread?' unread':'');d.innerHTML=`<div class="notif-avatar">${n.icon}</div><div class="notif-body"><div class="notif-text">${n.text}</div><div class="notif-time">${n.time}</div></div>${n.unread?'<div class="notif-dot"></div>':''}`;d.onclick=()=>{d.classList.remove('unread');n.unread=false;updateNotifBadge();};el.appendChild(d);});
+  updateNotifBadge();
+}
+function updateNotifBadge(){const unread=NOTIFS.filter(n=>n.unread).length;const badge=document.getElementById('notif-badge');if(badge)badge.style.display=unread?'block':'none';}
 
-// ─────────────────────────────────────────────────────
-//  NAVIGATION
-// ─────────────────────────────────────────────────────
-function navTo(page){
+// ── COMMENTS ──
+const DEMO_COMMENTS=[
+  {user:'Sipho_B',text:'Bro this is too fire 🔥🔥 Vaal represent!',time:'2m ago',img:'https://picsum.photos/seed/cm1/100/100'},
+  {user:'Lerato_D',text:'Eish wena, you always coming through with the content!',time:'5m ago',img:'https://picsum.photos/seed/cm2/100/100'},
+  {user:'NomvulaTV',text:'From Meyerton with love 💛 keep going strong!',time:'12m ago',img:'https://picsum.photos/seed/cm3/100/100'},
+  {user:'VaalKid',text:'Yasss represent!! The Vaal is THE place 🙌🏾',time:'18m ago',img:'https://picsum.photos/seed/cm4/100/100'},
+];
+function buildComments(){const l=document.getElementById('comments-list');DEMO_COMMENTS.forEach(c=>{const d=document.createElement('div');d.className='comment-item';d.innerHTML=`<div class="cav" style="background-image:url('${c.img}')"></div><div><div class="cuser">${c.user}</div><div class="ctext">${c.text}</div><div class="ctime">${c.time}</div></div>`;l.appendChild(d);});}
+
+// ── UPLOAD ──
+function openUpload(){resetUpload();document.getElementById('cf-upload-warn').style.display=CFG.cfWorker?'none':'block';openModal('upload-modal');}
+function onFileSelected(inp){const f=inp.files[0];if(!f)return;STATE.uploadFile=f;const btn=document.getElementById('upload-submit-btn');if(!CFG.cfWorker){btn.disabled=true;btn.textContent='Configure CF Stream first';return;}btn.disabled=false;btn.textContent='Upload: '+f.name;setStage(1);const dz=document.getElementById('dropzone');dz.querySelector('p').textContent='✓ '+f.name;dz.querySelector('small').textContent=fmtBytes(f.size)+' · Ready';}
+async function startUpload(){const f=STATE.uploadFile;if(!f||!CFG.cfWorker)return;const btn=document.getElementById('upload-submit-btn');btn.disabled=true;btn.textContent='Uploading...';setStage(2);showProg(true);setProg('Requesting upload URL...');try{const res=await fetch(CFG.cfWorker+'/upload-url',{method:'POST',headers:{'Content-Type':'application/json','Upload-Length':String(f.size)},body:JSON.stringify({fileSize:f.size,fileName:f.name})});if(!res.ok)throw new Error('Worker error '+res.status);const{uploadUrl,videoUid}=await res.json();if(!uploadUrl)throw new Error('No upload URL');const up=new tus.Upload(f,{uploadUrl,retryDelays:[0,3000,5000,10000],chunkSize:52428800,onError:e=>{setProg('Upload failed: '+e.message,'err');btn.disabled=false;btn.textContent='Retry';},onProgress:(b,t)=>{const p=Math.round(b/t*100);document.getElementById('prog-bar').style.width=p+'%';document.getElementById('prog-pct').textContent=p+'%';setProg(fmtBytes(b)+' / '+fmtBytes(t));},onSuccess:()=>{setStage(3);document.getElementById('prog-bar').style.width='100%';document.getElementById('prog-pct').textContent='100%';setProg('Published! 🔥','done');showToast('Video live on Vaal-Talk Beta! 🔥');closeModal('upload-modal');resetUpload();}});STATE.tusUpload=up;up.start();}catch(e){setProg('Error: '+e.message,'err');btn.disabled=false;btn.textContent='Retry';}}
+function setStage(n){[1,2,3].forEach(i=>{const el=document.getElementById('stage-'+i);if(el)el.className='ustage'+(i<n?' done':i===n?' active':'');});}
+function showProg(s){document.getElementById('upload-progress').classList.toggle('show',s);document.getElementById('dropzone').style.display=s?'none':'block';}
+function setProg(msg,t=''){const el=document.getElementById('prog-status');el.textContent=msg;el.className='prog-status'+(t?' '+t:'');}
+function resetUpload(){STATE.uploadFile=null;STATE.tusUpload=null;['upload-caption','upload-tags'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});const dz=document.getElementById('dropzone');if(dz){dz.querySelector('p').textContent='Tap to select video';dz.querySelector('small').textContent='MP4 · MOV · Max 100MB · 3 mins';}showProg(false);setStage(1);const btn=document.getElementById('upload-submit-btn');if(btn){btn.disabled=true;btn.textContent='Select a video first';}}
+function fmtBytes(b){if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(1)+'MB';}
+
+// ── NAV ──
+const LEGAL_PAGES=['terms','privacy','contact'];
+function navTo(page) {
   document.querySelectorAll('.page,.page-fill').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const isAdmin=page==='admin';
-  document.getElementById('bottom-nav').style.display=isAdmin?'none':'flex';
+  const isLegal=LEGAL_PAGES.includes(page);
+  const isNotif=page==='notifications';
+  document.getElementById('bottom-nav').style.display=(isLegal||isNotif)?'none':'flex';
   document.getElementById('feed-topbar').style.display=page==='feed'?'flex':'none';
-  document.getElementById('cf-status-bar').style.display=page==='feed'?'flex':'none';
+  document.getElementById('movie-topbar')&&(document.getElementById('movie-topbar').style.display='none');
   document.getElementById('sell-fab').classList.toggle('show',page==='market');
   const pg=document.getElementById('page-'+page);if(pg)pg.classList.add('active');
   const nv=document.getElementById('nav-'+page);if(nv)nv.classList.add('active');
 }
 
-// ─────────────────────────────────────────────────────
-//  MODALS & TOAST
-// ─────────────────────────────────────────────────────
+// ── MODALS & TOAST ──
 function openModal(id){document.getElementById(id).classList.remove('hidden')}
 function closeModal(id){document.getElementById(id).classList.add('hidden')}
-let tt;
-function showToast(msg,err){
+let toastTimer;
+function showToast(msg,type=''){
   const t=document.getElementById('toast'),m=document.getElementById('tmsg'),d=document.getElementById('tdot');
-  m.textContent=msg;d.className='tdot'+(err?' err':'');
-  t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),3000);
+  m.textContent=msg;
+  d.className='tdot'+(type===true||type==='err'?' err':type==='info'?' info':'');
+  t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3200);
 }
 
-// ─────────────────────────────────────────────────────
-//  INIT
-// ─────────────────────────────────────────────────────
-buildFeed();
-buildDiscover();
-buildMarket();
-buildKasies();
-buildProfile();
-buildReports();
-buildComments();
-navTo('feed');
-
-// Restore CF config from localStorage
-if (state.cf.workerUrl) {
-  testCFConnection(true);
-}
+// ── INIT ──
+(function init(){
+  initSupabase();
+  buildFeed();
+  buildMarket();
+  buildKasies();
+  buildJobCats();
+  buildJobs();
+  buildProfile();
+  buildNotifications();
+  buildComments();
+  buildInvitePlatforms();
+  restoreVoteUI();
+  updateAuthUI();
+  if(CFG.cfWorker)testCF(true);
+  navTo('feed');
+  // Update invite platforms after user is set
+  setTimeout(buildInvitePlatforms,2000);
+})();
 </script>
 </body>
 </html>
